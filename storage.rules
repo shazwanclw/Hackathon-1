@@ -1,0 +1,25 @@
+﻿rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAuthed() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthed()
+        && firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid))
+        && firestore.get(/databases/(default)/documents/admins/$(request.auth.uid)).data.enabled == true;
+    }
+
+    match /cases/{caseId}/{fileName} {
+      allow read: if true;
+      allow write: if request.resource.size < 3 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if isAdmin();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
