@@ -3,6 +3,8 @@
 ## 1) Product Overview
 StrayLink is a web platform for reporting stray animals and urban wildlife, then routing those reports to NGOs or municipal teams for action. The MVP is built with Next.js, Firebase, TensorFlow.js, and Leaflet/OpenStreetMap, with no paid APIs and no Google Cloud billing requirements.
 
+Implementation status update (February 20, 2026): Firebase Storage is now provisioned on project `kita-hack-hackathon`, and `storage.rules` has been successfully deployed.
+
 ## 2) Problem Statement
 Communities often detect stray animals before authorities do. Reporting channels are fragmented and unstructured, leading to delayed response, poor case visibility, and weak accountability.
 
@@ -107,7 +109,7 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - Data/Auth/Storage: Firebase Web SDK v9 modular.
 - AI: TensorFlow.js MobileNet loaded client-side and cached.
 - Maps: Leaflet + OpenStreetMap tiles.
-- Deployment: Firebase Hosting with Next.js static export (`output: 'export'`).
+- Deployment: Local development works with Next.js dev server. Current dynamic routes (`/track/[caseId]`, `/admin/case/[caseId]`) are not compatible with strict static export; for hosting, either refactor to static-safe routes or use a non-export Next hosting strategy.
 
 ## 10) Tech Constraints
 - Node 18+

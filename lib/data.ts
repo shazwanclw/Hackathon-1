@@ -67,11 +67,12 @@ export async function updatePublicTrackSnapshot(trackId: string, changes: Record
   });
 }
 
-export async function getPublicTrack(caseId: string, token: string) {
+export async function getPublicTrack(caseId: string, token: string): Promise<any | null> {
   const trackId = buildTrackId(caseId, token);
   const snap = await getDoc(doc(db, 'public_tracks', trackId));
   if (!snap.exists()) return null;
-  return { id: snap.id, ...snap.data() };
+  const data = snap.data() as Record<string, unknown>;
+  return { id: snap.id, ...data };
 }
 
 export async function logCaseEvent(event: CaseEvent) {
@@ -81,10 +82,11 @@ export async function logCaseEvent(event: CaseEvent) {
   });
 }
 
-export async function getCaseById(caseId: string) {
+export async function getCaseById(caseId: string): Promise<any | null> {
   const snap = await getDoc(doc(db, 'cases', caseId));
   if (!snap.exists()) return null;
-  return { id: snap.id, ...snap.data() };
+  const data = snap.data() as Record<string, unknown>;
+  return { id: snap.id, ...data };
 }
 
 export async function listCases(filters: CaseFilters = {}) {
@@ -95,7 +97,7 @@ export async function listCases(filters: CaseFilters = {}) {
   }
 
   const snaps = await getDocs(q);
-  let rows = snaps.docs.map((d) => ({ id: d.id, ...d.data() }));
+  let rows: any[] = snaps.docs.map((d) => ({ id: d.id, ...d.data() }));
 
   if (filters.urgency && filters.urgency !== 'all') {
     rows = rows.filter((row) => row.triage?.urgency === filters.urgency);
@@ -111,3 +113,5 @@ export async function listCases(filters: CaseFilters = {}) {
 export async function updateCase(caseId: string, changes: Record<string, unknown>) {
   await updateDoc(doc(db, 'cases', caseId), changes);
 }
+
+

@@ -17,16 +17,19 @@
 - [x] Add `/styles` map and utility CSS.
 
 ## 3) Firebase Setup
+- [x] Install Firebase CLI locally on development machine.
 - [x] Implement Firebase initialization module.
 - [x] Implement Auth helpers for admin login/logout and admin status check.
 - [x] Implement Firestore helpers for CRUD and events.
 - [x] Implement Storage upload helper.
+- [x] Provision Firebase Storage service in project.
 - [x] Add `.env.example` with required `NEXT_PUBLIC_*` keys.
 
 ## 4) Security Rules and Config
 - [x] Create `firestore.rules` with public-create + tokenized tracking snapshot + admin permissions.
 - [x] Create `storage.rules` with constrained upload/read policy.
 - [x] Add `firebase.json` hosting/firestore/storage configuration.
+- [x] Deploy Firestore and Storage rules.
 
 ## 5) Public Experience
 - [x] Build landing page (`/`).
@@ -62,6 +65,7 @@
 - [x] Keep `checklist.md` synchronized and tick completed items.
 
 ## 9) Validation
-- [ ] Verify TypeScript compile assumptions.
+- [ ] Resolve deployment strategy for dynamic routes (refactor to static-safe routing OR switch from `output: export`).
+- [x] Verify TypeScript compile assumptions (core type errors fixed; production build now blocked by static export + dynamic route constraint).
 - [ ] Verify key flows manually (report, track, admin login, status transitions).
 - [ ] Final pass on security/privacy and demo readiness.

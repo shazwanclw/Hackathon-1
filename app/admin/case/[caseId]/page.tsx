@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import AdminGuard from '@/components/AdminGuard';
@@ -25,24 +25,24 @@ export default function AdminCaseDetailPage() {
   const [resolutionOutcome, setResolutionOutcome] = useState<ResolutionOutcome>('unknown');
   const [resolutionNotes, setResolutionNotes] = useState('');
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     setLoading(true);
     const data = await getCaseById(caseId);
     setItem(data);
     if (data) {
-      setAnimalType(data.ai?.animalType ?? 'other');
-      setUrgency(data.triage?.urgency ?? 'medium');
-      setTriageReason(data.triage?.reason ?? '');
-      setAssignedTo(data.assignedTo ?? '');
-      setResolutionOutcome(data.resolution?.outcome ?? 'unknown');
-      setResolutionNotes(data.resolution?.notes ?? '');
+      setAnimalType((data.ai as any)?.animalType ?? 'other');
+      setUrgency((data.triage as any)?.urgency ?? 'medium');
+      setTriageReason((data.triage as any)?.reason ?? '');
+      setAssignedTo((data.assignedTo as string | undefined) ?? '');
+      setResolutionOutcome((data.resolution as any)?.outcome ?? 'unknown');
+      setResolutionNotes((data.resolution as any)?.notes ?? '');
     }
     setLoading(false);
-  }
+  }, [caseId]);
 
   useEffect(() => {
     refresh();
-  }, [caseId]);
+  }, [refresh]);
 
   async function verifyCase(e: FormEvent) {
     e.preventDefault();
