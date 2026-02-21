@@ -43,7 +43,7 @@
 - [x] Build tracking page `/track/[caseId]` with token gate and limited fields.
 
 ## 6) Admin Experience
-- [x] Build admin login page (`/admin/login`) with Google sign-in.
+- [x] Use unified auth page (`/auth`) for admin and public sign-in (Google + email/password), with role-based routing.
 - [x] Build admin dashboard (`/admin/dashboard`) with filters and list.
 - [x] Build case detail page (`/admin/case/[caseId]`) with workflow actions.
 - [x] Build admin map page (`/admin/map`) with filters + markers.
@@ -68,5 +68,5 @@
 ## 9) Validation
 - [ ] Resolve deployment strategy for dynamic routes (refactor to static-safe routing OR switch from `output: export`).
 - [x] Verify TypeScript compile assumptions (core type errors fixed; production build now blocked by static export + dynamic route constraint).
-- [ ] Verify key flows manually (report, track, public auth, admin login, status transitions).
+ - [ ] Verify key flows manually (report, track, public auth, admin role routing, status transitions).
 - [ ] Final pass on security/privacy and demo readiness.

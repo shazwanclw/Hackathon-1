@@ -24,7 +24,7 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - Track limited status via `/track/[caseId]?t=<token>`.
 
 ### Admin / NGO Operator (login required)
-- Authenticate via Firebase Auth (Google sign-in).
+- Authenticate via Firebase Auth at `/auth` (Google sign-in or email/password).
 - Access dashboard, case detail, and map.
 - Verify AI tags, triage urgency, assign responders, resolve/reject cases.
 
@@ -60,7 +60,7 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - Track page reads only the `public_tracks` snapshot, never full `cases` doc.
 
 ### Admin
-- Login page `/admin/login` with Google sign-in.
+- Unified login page `/auth` handles admin and public sign-in.
 - Dashboard `/admin/dashboard` lists/filter cases.
 - Case detail `/admin/case/[caseId]` supports verify/assign/resolve/reject with event log.
 - Admin actions also sync `public_tracks` status snapshot.

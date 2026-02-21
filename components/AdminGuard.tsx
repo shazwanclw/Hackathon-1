@@ -14,7 +14,7 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     const unsub = observeAuth(async (user: User | null) => {
       if (!user) {
-        router.replace('/admin/login');
+        router.replace('/auth');
         setState('blocked');
         return;
       }
@@ -23,7 +23,7 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
       if (!admin) {
         toast.error('You are signed in but not in admins collection.');
         setState('blocked');
-        router.replace('/admin/login');
+        router.replace('/auth');
         return;
       }
       setState('allowed');

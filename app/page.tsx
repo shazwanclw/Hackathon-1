@@ -1,4 +1,5 @@
-﻿import Link from 'next/link';
+import React from 'react';
+import Link from 'next/link';
 
 export default function HomePage() {
   return (
@@ -10,9 +11,7 @@ export default function HomePage() {
           StrayLink lets communities submit geotagged reports with AI-assisted animal tagging and gives NGOs a clear workflow from new cases to resolution.
         </p>
         <div className="mt-6 flex gap-3">
-          <Link href="/report" className="btn-primary">Submit a Report</Link>
-          <Link href="/auth" className="btn-secondary">Login / Join</Link>
-          <Link href="/admin/login" className="btn-secondary">Admin Login</Link>
+          <Link href="/auth" className="btn-primary">Login / Join</Link>
         </div>
       </div>
       <div className="card p-5">

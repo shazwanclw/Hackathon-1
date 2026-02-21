@@ -3,7 +3,7 @@
 import { FormEvent, useMemo, useState } from 'react';
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { loginWithEmail, registerWithEmail } from '@/lib/auth';
+import { isUserAdmin, loginWithEmail, loginWithGoogle, registerWithEmail } from '@/lib/auth';
 
 type Mode = 'login' | 'register';
 
@@ -32,6 +32,11 @@ export default function AuthPage() {
     [mode]
   );
 
+  async function routeByRole(uid: string) {
+    const admin = await isUserAdmin(uid);
+    router.push(admin ? '/admin/dashboard' : '/report');
+  }
+
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
@@ -39,11 +44,25 @@ export default function AuthPage() {
 
     try {
       if (mode === 'login') {
-        await loginWithEmail(email, password);
+        const result = await loginWithEmail(email, password);
+        await routeByRole(result.user.uid);
       } else {
-        await registerWithEmail(email, password);
+        const result = await registerWithEmail(email, password);
+        await routeByRole(result.user.uid);
       }
-      router.push('/report');
+    } catch (err) {
+      setError(mapErrorMessage(err));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function onGoogleSignIn() {
+    setSubmitting(true);
+    setError('');
+    try {
+      const result = await loginWithGoogle();
+      await routeByRole(result.user.uid);
     } catch (err) {
       setError(mapErrorMessage(err));
     } finally {
@@ -78,6 +97,10 @@ export default function AuthPage() {
         </div>
 
         <h1 className="text-2xl font-bold">{title}</h1>
+
+        <button className="btn-secondary w-full" type="button" onClick={onGoogleSignIn} disabled={submitting}>
+          {submitting ? 'Please wait...' : 'Continue with Google'}
+        </button>
 
         <form className="space-y-3" onSubmit={onSubmit}>
           <div className="space-y-1">

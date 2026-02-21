@@ -9,12 +9,12 @@ StrayLink is a free-tier web MVP for reporting stray animals/urban wildlife and 
 - Leaflet + OpenStreetMap tiles
 
 ## Features
-- Public homepage (`/`) with mission/goals and clear CTA paths
-- Public auth (`/auth`): email/password login, registration, or join as guest
+- Public homepage (`/`) with mission/goals and a single `Login / Join` CTA
+- Unified auth (`/auth`): email/password login, registration, Google sign-in, or join as guest
 - Public report flow: photo upload, map click location, behavior + danger metadata
 - Client-side AI auto-tag to `cat|dog|other`
 - Firestore case lifecycle with event logs
-- Admin auth via Google + admins collection gating
+- Role-based admin access from the same `/auth` flow via `admins` collection gating
 - Admin dashboard, case detail actions, map view
 - Public tracking via case ID + tracking token
 
@@ -34,7 +34,7 @@ npm install
 2. Create Firebase project (Spark/free plan is enough).
 3. Enable Firebase Auth providers:
 - Email/Password (for public `/auth`)
-- Google (for `/admin/login`)
+- Google (for `/auth`)
 4. Create Firestore database (production/test mode as needed).
 5. Enable Firebase Storage.
 6. Copy `.env.example` to `.env.local` and fill values:
@@ -54,14 +54,14 @@ firebase deploy --only firestore:rules,storage
 ```
 
 ## Admin Bootstrap
-1. Run app and sign in once via `/admin/login` to get your UID.
+1. Run app and sign in once via `/auth` (Google or email/password) to get your UID.
 2. In Firestore, create doc:
 - Collection: `admins`
 - Doc ID: `<your-uid>`
 - Fields:
   - `enabled: true`
   - `createdAt: <timestamp>`
-3. Sign in again; you should be routed to dashboard.
+3. Sign in again via `/auth`; admin users are routed to `/admin/dashboard`, non-admin users to `/report`.
 
 ## Run locally
 ```bash

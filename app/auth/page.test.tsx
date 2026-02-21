@@ -2,7 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import AuthPage from './page';
-import { loginWithEmail, registerWithEmail } from '@/lib/auth';
+import { isUserAdmin, loginWithEmail, loginWithGoogle, registerWithEmail } from '@/lib/auth';
 
 const push = vi.fn();
 
@@ -15,6 +15,8 @@ vi.mock('next/navigation', () => ({
 vi.mock('@/lib/auth', () => ({
   loginWithEmail: vi.fn(),
   registerWithEmail: vi.fn(),
+  loginWithGoogle: vi.fn(),
+  isUserAdmin: vi.fn(),
 }));
 
 describe('Public auth page', () => {
@@ -26,6 +28,7 @@ describe('Public auth page', () => {
     render(<AuthPage />);
     expect(screen.getByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^login$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
   });
 
   it('switches to register mode', () => {
@@ -44,7 +47,8 @@ describe('Public auth page', () => {
   });
 
   it('logs in with email and password', async () => {
-    vi.mocked(loginWithEmail).mockResolvedValue({} as never);
+    vi.mocked(loginWithEmail).mockResolvedValue({ user: { uid: 'u-1' } } as never);
+    vi.mocked(isUserAdmin).mockResolvedValue(false);
     render(<AuthPage />);
 
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'user@example.com' } });
@@ -57,8 +61,24 @@ describe('Public auth page', () => {
     });
   });
 
+  it('routes admin account to dashboard after login', async () => {
+    vi.mocked(loginWithEmail).mockResolvedValue({ user: { uid: 'admin-1' } } as never);
+    vi.mocked(isUserAdmin).mockResolvedValue(true);
+    render(<AuthPage />);
+
+    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'admin@example.com' } });
+    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'password123' } });
+    fireEvent.click(screen.getByRole('button', { name: /^login$/i }));
+
+    await waitFor(() => {
+      expect(isUserAdmin).toHaveBeenCalledWith('admin-1');
+      expect(push).toHaveBeenCalledWith('/admin/dashboard');
+    });
+  });
+
   it('registers with email and password', async () => {
-    vi.mocked(registerWithEmail).mockResolvedValue({} as never);
+    vi.mocked(registerWithEmail).mockResolvedValue({ user: { uid: 'u-2' } } as never);
+    vi.mocked(isUserAdmin).mockResolvedValue(false);
     render(<AuthPage />);
 
     fireEvent.click(screen.getByRole('button', { name: /switch to register/i }));
@@ -69,6 +89,20 @@ describe('Public auth page', () => {
     await waitFor(() => {
       expect(registerWithEmail).toHaveBeenCalledWith('new@example.com', 'password123');
       expect(push).toHaveBeenCalledWith('/report');
+    });
+  });
+
+  it('allows google sign-in and routes admins to dashboard', async () => {
+    vi.mocked(loginWithGoogle).mockResolvedValue({ user: { uid: 'admin-google' } } as never);
+    vi.mocked(isUserAdmin).mockResolvedValue(true);
+    render(<AuthPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /continue with google/i }));
+
+    await waitFor(() => {
+      expect(loginWithGoogle).toHaveBeenCalledTimes(1);
+      expect(isUserAdmin).toHaveBeenCalledWith('admin-google');
+      expect(push).toHaveBeenCalledWith('/admin/dashboard');
     });
   });
 });
