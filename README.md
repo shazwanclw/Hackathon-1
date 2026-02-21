@@ -9,6 +9,8 @@ StrayLink is a free-tier web MVP for reporting stray animals/urban wildlife and 
 - Leaflet + OpenStreetMap tiles
 
 ## Features
+- Public homepage (`/`) with mission/goals and clear CTA paths
+- Public auth (`/auth`): email/password login, registration, or join as guest
 - Public report flow: photo upload, map click location, behavior + danger metadata
 - Client-side AI auto-tag to `cat|dog|other`
 - Firestore case lifecycle with event logs
@@ -30,7 +32,9 @@ StrayLink is a free-tier web MVP for reporting stray animals/urban wildlife and 
 npm install
 ```
 2. Create Firebase project (Spark/free plan is enough).
-3. Enable Firebase Auth -> Google provider.
+3. Enable Firebase Auth providers:
+- Email/Password (for public `/auth`)
+- Google (for `/admin/login`)
 4. Create Firestore database (production/test mode as needed).
 5. Enable Firebase Storage.
 6. Copy `.env.example` to `.env.local` and fill values:
@@ -64,6 +68,13 @@ firebase deploy --only firestore:rules,storage
 npm run dev
 ```
 Open `http://localhost:3000`.
+
+## Test and quality checks
+```bash
+npm run test
+npm run lint
+npm run typecheck
+```
 
 ## Build and static export
 ```bash

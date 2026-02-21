@@ -11,6 +11,7 @@ export default function HomePage() {
         </p>
         <div className="mt-6 flex gap-3">
           <Link href="/report" className="btn-primary">Submit a Report</Link>
+          <Link href="/auth" className="btn-secondary">Login / Join</Link>
           <Link href="/admin/login" className="btn-secondary">Admin Login</Link>
         </div>
       </div>

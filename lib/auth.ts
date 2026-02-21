@@ -1,11 +1,26 @@
 ﻿"use client";
 
-import { onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
+import {
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signOut,
+  User,
+} from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db, googleProvider } from './firebase';
 
 export async function loginWithGoogle() {
   return signInWithPopup(auth, googleProvider);
+}
+
+export async function loginWithEmail(email: string, password: string) {
+  return signInWithEmailAndPassword(auth, email, password);
+}
+
+export async function registerWithEmail(email: string, password: string) {
+  return createUserWithEmailAndPassword(auth, email, password);
 }
 
 export async function logout() {

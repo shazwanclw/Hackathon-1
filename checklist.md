@@ -33,6 +33,7 @@
 
 ## 5) Public Experience
 - [x] Build landing page (`/`).
+- [x] Build public auth page (`/auth`) with login/register/guest flow.
 - [x] Build report form page (`/report`) with validation.
 - [x] Build upload dropzone with 3MB limit and friendly errors.
 - [x] Build map picker using Leaflet + OSM.
@@ -67,5 +68,5 @@
 ## 9) Validation
 - [ ] Resolve deployment strategy for dynamic routes (refactor to static-safe routing OR switch from `output: export`).
 - [x] Verify TypeScript compile assumptions (core type errors fixed; production build now blocked by static export + dynamic route constraint).
-- [ ] Verify key flows manually (report, track, admin login, status transitions).
+- [ ] Verify key flows manually (report, track, public auth, admin login, status transitions).
 - [ ] Final pass on security/privacy and demo readiness.

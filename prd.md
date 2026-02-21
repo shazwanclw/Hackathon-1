@@ -16,7 +16,9 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - creating traceable workflows between citizens and response teams.
 
 ## 4) Users and Roles
-### Public Reporter (no login)
+### Public Reporter (guest or optional account login)
+- Continue as guest without account/session.
+- Optionally register/login via email and password at `/auth`.
 - Submit a case with photo, location, and incident details.
 - Receive case ID and tracking token.
 - Track limited status via `/track/[caseId]?t=<token>`.
@@ -44,6 +46,7 @@ StrayLink contributes to safer, healthier neighborhoods by:
 ## 6) Functional Requirements
 ### Public
 - Landing page `/` explains value and calls to action.
+- Public auth page `/auth` provides login, register, and guest-entry actions.
 - Report page `/report` supports photo upload, map click, metadata, and note.
 - Submission flow:
   1. Validate fields.
