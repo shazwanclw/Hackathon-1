@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
+import PublicAccessGuard from '@/components/PublicAccessGuard';
 import StatusBadge from '@/components/StatusBadge';
 import { ErrorState, LoadingState } from '@/components/States';
 import { getPublicTrack } from '@/lib/data';
@@ -47,23 +48,26 @@ export default function TrackPage() {
     };
   }, [caseId, token]);
 
-  if (loading) return <LoadingState text="Loading case status..." />;
-  if (error) return <ErrorState text={error} />;
-  if (!caseItem) return <ErrorState text="Case not found." />;
-
   return (
-    <section className="mx-auto max-w-xl space-y-4">
-      <h1 className="text-2xl font-bold">Track Case</h1>
-      <div className="card space-y-3 p-4">
-        <p className="text-sm text-slate-600">Case ID: {caseItem.id}</p>
-        <StatusBadge status={caseItem.status} />
-        <p className="text-sm">
-          Animal type (AI): <span className="font-semibold">{caseItem.ai?.animalType ?? 'other'}</span>
-        </p>
-        <p className="text-sm">Urgency: {caseItem.triage?.urgency ?? 'low'}</p>
-        <p className="text-sm text-slate-600">Assigned team: {caseItem.assignedTo || 'Not assigned yet'}</p>
-        {caseItem.resolution ? <p className="text-sm">Resolution: {caseItem.resolution.outcome}</p> : null}
-      </div>
-    </section>
+    <PublicAccessGuard>
+      {loading ? <LoadingState text="Loading case status..." /> : null}
+      {!loading && error ? <ErrorState text={error} /> : null}
+      {!loading && !error && !caseItem ? <ErrorState text="Case not found." /> : null}
+      {!loading && !error && caseItem ? (
+        <section className="mx-auto max-w-xl space-y-4">
+          <h1 className="text-2xl font-bold">Track Case</h1>
+          <div className="card space-y-3 p-4">
+            <p className="text-sm text-slate-600">Case ID: {caseItem.id}</p>
+            <StatusBadge status={caseItem.status} />
+            <p className="text-sm">
+              Animal type (AI): <span className="font-semibold">{caseItem.ai?.animalType ?? 'other'}</span>
+            </p>
+            <p className="text-sm">Urgency: {caseItem.triage?.urgency ?? 'low'}</p>
+            <p className="text-sm text-slate-600">Assigned team: {caseItem.assignedTo || 'Not assigned yet'}</p>
+            {caseItem.resolution ? <p className="text-sm">Resolution: {caseItem.resolution.outcome}</p> : null}
+          </div>
+        </section>
+      ) : null}
+    </PublicAccessGuard>
   );
 }

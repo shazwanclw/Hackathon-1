@@ -34,6 +34,15 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /public_map_cases/{caseId} {
+      allow create: if true
+        && request.resource.data.caseId is string
+        && request.resource.data.status is string;
+      allow get, list: if true;
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
     match /case_events/{eventId} {
       allow create: if true
         && request.resource.data.caseId is string

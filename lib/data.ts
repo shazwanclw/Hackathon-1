@@ -14,7 +14,7 @@
 } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { db, storage } from './firebase';
-import { CaseDoc, CaseEvent, CaseFilters } from './types';
+import { CaseDoc, CaseEvent, CaseFilters, PublicMapCase } from './types';
 
 export function getSessionId() {
   const key = 'straylink_session_id';
@@ -60,6 +60,21 @@ export async function setPublicTrackSnapshot(trackId: string, payload: Record<st
   });
 }
 
+export async function setPublicMapCase(caseId: string, payload: Record<string, unknown>) {
+  await setDoc(doc(db, 'public_map_cases', caseId), {
+    caseId,
+    ...payload,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function updatePublicMapCase(caseId: string, changes: Record<string, unknown>) {
+  await updateDoc(doc(db, 'public_map_cases', caseId), {
+    ...changes,
+    updatedAt: serverTimestamp(),
+  });
+}
+
 export async function updatePublicTrackSnapshot(trackId: string, changes: Record<string, unknown>) {
   await updateDoc(doc(db, 'public_tracks', trackId), {
     ...changes,
@@ -98,6 +113,25 @@ export async function listCases(filters: CaseFilters = {}) {
 
   const snaps = await getDocs(q);
   let rows: any[] = snaps.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+  if (filters.urgency && filters.urgency !== 'all') {
+    rows = rows.filter((row) => row.triage?.urgency === filters.urgency);
+  }
+
+  if (filters.animalType && filters.animalType !== 'all') {
+    rows = rows.filter((row) => row.ai?.animalType === filters.animalType);
+  }
+
+  return rows;
+}
+
+export async function listPublicMapCases(filters: CaseFilters = {}): Promise<PublicMapCase[]> {
+  const snaps = await getDocs(query(collection(db, 'public_map_cases'), limit(500)));
+  let rows = snaps.docs.map((d) => ({ id: d.id, ...d.data() })) as PublicMapCase[];
+
+  if (filters.status && filters.status !== 'all') {
+    rows = rows.filter((row) => row.status === filters.status);
+  }
 
   if (filters.urgency && filters.urgency !== 'all') {
     rows = rows.filter((row) => row.triage?.urgency === filters.urgency);

@@ -48,6 +48,7 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - Landing page `/` explains value and calls to action.
 - Public auth page `/auth` provides login, register, and guest-entry actions.
 - Report page `/report` supports photo upload, map click, metadata, and note.
+- Public map page `/map` shows all submitted case markers using limited public snapshot fields.
 - Submission flow:
   1. Validate fields.
   2. Generate `caseId`.
@@ -90,6 +91,14 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - `resolution`: `{ outcome, notes } | null`
 - `updatedAt`: serverTimestamp
 
+### Firestore: `public_map_cases/{caseId}`
+- `caseId`: string
+- `status`: string
+- `ai`: `{ animalType }`
+- `triage`: `{ urgency }`
+- `location`: `{ lat, lng }`
+- `updatedAt`: serverTimestamp
+
 ### Firestore: `case_events/{eventId}`
 - `caseId`, `timestamp`, `actorUid`, `action`, `changes`
 
@@ -101,6 +110,7 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - **Chosen approach: Option A-equivalent tokenized tracking snapshot.**
 - Public cannot read/list `cases`.
 - Public tracking reads are limited to `public_tracks/{caseId_token}` by possession of the secret tokenized document ID.
+- Public map reads are served from `public_map_cases` limited snapshots (no direct public `cases` reads).
 - Public can create `cases`, `public_tracks`, and `case_events` with restricted shape checks.
 - Admin access requires `/admins/{uid}.enabled == true`.
 - Admins can read/list/update all `cases`, update `public_tracks`, and read/list `case_events`.

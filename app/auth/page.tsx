@@ -3,6 +3,7 @@
 import { FormEvent, useMemo, useState } from 'react';
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import { setGuestAccess } from '@/lib/access';
 import { isUserAdmin, loginWithEmail, loginWithGoogle, registerWithEmail } from '@/lib/auth';
 
 type Mode = 'login' | 'register';
@@ -33,6 +34,7 @@ export default function AuthPage() {
   );
 
   async function routeByRole(uid: string) {
+    setGuestAccess(false);
     const admin = await isUserAdmin(uid);
     router.push(admin ? '/admin/dashboard' : '/report');
   }
@@ -71,7 +73,8 @@ export default function AuthPage() {
   }
 
   function onGuest() {
-    router.push('/report');
+    setGuestAccess(true);
+    router.push('/');
   }
 
   return (

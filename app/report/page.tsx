@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { FormEvent, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
+import PublicAccessGuard from '@/components/PublicAccessGuard';
 import UploadDropzone from '@/components/UploadDropzone';
 import { classifyImage } from '@/lib/tf';
 import {
@@ -13,6 +14,7 @@ import {
   getSessionId,
   logCaseEvent,
   setCase,
+  setPublicMapCase,
   setPublicTrackSnapshot,
   uploadCaseImage,
 } from '@/lib/data';
@@ -124,6 +126,20 @@ export default function ReportPage() {
         resolution: null,
       });
 
+      await setPublicMapCase(caseId, {
+        status: 'new',
+        ai: {
+          animalType: ai.animalType,
+        },
+        triage: {
+          urgency: immediateDanger ? 'high' : 'medium',
+        },
+        location: {
+          lat: location.lat,
+          lng: location.lng,
+        },
+      });
+
       await logCaseEvent({
         caseId,
         actorUid: null,
@@ -156,7 +172,8 @@ export default function ReportPage() {
   }
 
   return (
-    <section className="mx-auto max-w-2xl space-y-5">
+    <PublicAccessGuard>
+      <section className="mx-auto max-w-2xl space-y-5">
       <h1 className="text-2xl font-bold">Submit a Stray Animal Report</h1>
       <form onSubmit={onSubmit} className="space-y-4">
         <UploadDropzone file={file} onFileChange={handleFileChange} error={fileError} />
@@ -216,6 +233,7 @@ export default function ReportPage() {
           </Link>
         </div>
       ) : null}
-    </section>
+      </section>
+    </PublicAccessGuard>
   );
 }

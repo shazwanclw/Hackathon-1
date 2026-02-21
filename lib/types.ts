@@ -58,3 +58,19 @@ export interface CaseFilters {
   urgency?: Urgency | 'all';
   animalType?: AnimalType | 'all';
 }
+
+export interface PublicMapCase {
+  id: string;
+  caseId: string;
+  status: CaseStatus;
+  ai: {
+    animalType: AnimalType;
+  };
+  triage: {
+    urgency: Urgency;
+  };
+  location: {
+    lat: number;
+    lng: number;
+  };
+}

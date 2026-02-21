@@ -35,6 +35,7 @@
 - [x] Build landing page (`/`).
 - [x] Build public auth page (`/auth`) with login/register/guest flow.
 - [x] Build report form page (`/report`) with validation.
+- [x] Build public map page (`/map`) showing all case markers from public snapshots.
 - [x] Build upload dropzone with 3MB limit and friendly errors.
 - [x] Build map picker using Leaflet + OSM.
 - [x] Integrate TFJS classify flow in submit lifecycle.
@@ -68,5 +69,5 @@
 ## 9) Validation
 - [ ] Resolve deployment strategy for dynamic routes (refactor to static-safe routing OR switch from `output: export`).
 - [x] Verify TypeScript compile assumptions (core type errors fixed; production build now blocked by static export + dynamic route constraint).
- - [ ] Verify key flows manually (report, track, public auth, admin role routing, status transitions).
+ - [ ] Verify key flows manually (report, track, public auth, public map, admin role routing, status transitions).
 - [ ] Final pass on security/privacy and demo readiness.

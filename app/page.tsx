@@ -1,7 +1,29 @@
-import React from 'react';
+"use client";
+
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { User } from 'firebase/auth';
+import { observeAuth } from '@/lib/auth';
+import { hasGuestAccess, onAccessChange } from '@/lib/access';
 
 export default function HomePage() {
+  const [user, setUser] = useState<User | null>(null);
+  const [guest, setGuest] = useState(false);
+
+  useEffect(() => {
+    setGuest(hasGuestAccess());
+    const unsubAccess = onAccessChange(() => {
+      setGuest(hasGuestAccess());
+    });
+    const unsub = observeAuth((currentUser) => {
+      setUser(currentUser);
+    });
+    return () => {
+      unsub();
+      unsubAccess();
+    };
+  }, []);
+
   return (
     <section className="grid gap-6 py-8 md:grid-cols-2 md:items-center">
       <div>
@@ -10,9 +32,11 @@ export default function HomePage() {
         <p className="mt-4 text-slate-600">
           StrayLink lets communities submit geotagged reports with AI-assisted animal tagging and gives NGOs a clear workflow from new cases to resolution.
         </p>
-        <div className="mt-6 flex gap-3">
-          <Link href="/auth" className="btn-primary">Login / Join</Link>
-        </div>
+        {!user && !guest ? (
+          <div className="mt-6 flex gap-3">
+            <Link href="/auth" className="btn-primary">Login / Join</Link>
+          </div>
+        ) : null}
       </div>
       <div className="card p-5">
         <h2 className="text-lg font-bold">How it works</h2>

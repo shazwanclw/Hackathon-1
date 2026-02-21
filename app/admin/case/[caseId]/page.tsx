@@ -7,7 +7,7 @@ import AdminGuard from '@/components/AdminGuard';
 import StatusBadge from '@/components/StatusBadge';
 import { ErrorState, LoadingState } from '@/components/States';
 import { auth } from '@/lib/firebase';
-import { buildTrackId, getCaseById, logCaseEvent, updateCase, updatePublicTrackSnapshot } from '@/lib/data';
+import { buildTrackId, getCaseById, logCaseEvent, updateCase, updatePublicMapCase, updatePublicTrackSnapshot } from '@/lib/data';
 import { AnimalType, ResolutionOutcome, Urgency } from '@/lib/types';
 
 export default function AdminCaseDetailPage() {
@@ -66,6 +66,11 @@ export default function AdminCaseDetailPage() {
         ai: { animalType, confidence: item.ai?.confidence ?? 0 },
         triage: { urgency },
       });
+      await updatePublicMapCase(caseId, {
+        status: 'verified',
+        ai: { animalType },
+        triage: { urgency },
+      });
       toast.success('Case verified');
       await refresh();
     } catch {
@@ -90,6 +95,9 @@ export default function AdminCaseDetailPage() {
       await updatePublicTrackSnapshot(buildTrackId(caseId, item.trackingToken), {
         status: 'assigned',
         assignedTo: assignedTo.trim(),
+      });
+      await updatePublicMapCase(caseId, {
+        status: 'assigned',
       });
       toast.success('Case assigned');
       await refresh();
@@ -123,6 +131,9 @@ export default function AdminCaseDetailPage() {
         status: 'resolved',
         resolution: { outcome: resolutionOutcome, notes: resolutionNotes },
       });
+      await updatePublicMapCase(caseId, {
+        status: 'resolved',
+      });
       toast.success('Case resolved');
       await refresh();
     } catch {
@@ -144,6 +155,9 @@ export default function AdminCaseDetailPage() {
         changes: {},
       });
       await updatePublicTrackSnapshot(buildTrackId(caseId, item.trackingToken), {
+        status: 'rejected',
+      });
+      await updatePublicMapCase(caseId, {
         status: 'rejected',
       });
       toast.success('Case rejected');

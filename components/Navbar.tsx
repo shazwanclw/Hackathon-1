@@ -1,41 +1,50 @@
 "use client";
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { User } from 'firebase/auth';
+import { hasGuestAccess, onAccessChange, setGuestAccess } from '@/lib/access';
 import { isUserAdmin, logout, observeAuth } from '@/lib/auth';
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [admin, setAdmin] = useState(false);
+  const [guest, setGuest] = useState(false);
 
   useEffect(() => {
+    setGuest(hasGuestAccess());
+    const unsubAccess = onAccessChange(() => {
+      setGuest(hasGuestAccess());
+    });
     const unsub = observeAuth(async (currentUser) => {
       setUser(currentUser);
       if (!currentUser) {
         setAdmin(false);
+        setGuest(hasGuestAccess());
         return;
       }
       const allowed = await isUserAdmin(currentUser.uid);
       setAdmin(allowed);
     });
 
-    return () => unsub();
+    return () => {
+      unsub();
+      unsubAccess();
+    };
   }, []);
 
   const links = [{ href: '/', label: 'Home' }];
 
-  if (!user) {
-    links.push({ href: '/auth', label: 'Login' });
-  } else {
+  if (user || guest) {
     links.push({ href: '/report', label: 'Report' });
+    links.push({ href: '/map', label: 'Map' });
   }
 
   if (admin) {
     links.push({ href: '/admin/dashboard', label: 'Admin' });
-    links.push({ href: '/admin/map', label: 'Map' });
   }
 
   return (
@@ -57,15 +66,29 @@ export default function Navbar() {
               </Link>
             );
           })}
-          {user ? (
+          {!user && !guest ? (
+            <Link
+              href="/auth"
+              className={`rounded-md px-3 py-1.5 text-sm ${pathname === '/auth' ? 'bg-brand-100 text-brand-900' : 'text-slate-600 hover:bg-slate-100'}`}
+            >
+              Login
+            </Link>
+          ) : null}
+          {user || guest ? (
             <button
               type="button"
-              onClick={() => {
-                void logout();
+              onClick={async () => {
+                setGuestAccess(false);
+                if (user) {
+                  await logout();
+                }
+                setGuest(false);
+                setAdmin(false);
+                router.push('/');
               }}
               className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
             >
-              Logout
+              {user ? 'Logout' : 'Exit Guest'}
             </button>
           ) : null}
         </nav>

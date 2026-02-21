@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import AuthPage from './page';
 import { isUserAdmin, loginWithEmail, loginWithGoogle, registerWithEmail } from '@/lib/auth';
+import { setGuestAccess } from '@/lib/access';
 
 const push = vi.fn();
 
@@ -17,6 +18,10 @@ vi.mock('@/lib/auth', () => ({
   registerWithEmail: vi.fn(),
   loginWithGoogle: vi.fn(),
   isUserAdmin: vi.fn(),
+}));
+
+vi.mock('@/lib/access', () => ({
+  setGuestAccess: vi.fn(),
 }));
 
 describe('Public auth page', () => {
@@ -38,10 +43,11 @@ describe('Public auth page', () => {
     expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument();
   });
 
-  it('navigates to report page on guest flow', () => {
+  it('stores guest access and navigates home on guest flow', () => {
     render(<AuthPage />);
     fireEvent.click(screen.getByRole('button', { name: /join as guest/i }));
-    expect(push).toHaveBeenCalledWith('/report');
+    expect(setGuestAccess).toHaveBeenCalledWith(true);
+    expect(push).toHaveBeenCalledWith('/');
     expect(loginWithEmail).not.toHaveBeenCalled();
     expect(registerWithEmail).not.toHaveBeenCalled();
   });

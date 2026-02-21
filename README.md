@@ -12,6 +12,7 @@ StrayLink is a free-tier web MVP for reporting stray animals/urban wildlife and 
 - Public homepage (`/`) with mission/goals and a single `Login / Join` CTA
 - Unified auth (`/auth`): email/password login, registration, Google sign-in, or join as guest
 - Public report flow: photo upload, map click location, behavior + danger metadata
+- Public map (`/map`) showing all submitted case markers from limited public snapshot data
 - Client-side AI auto-tag to `cat|dog|other`
 - Firestore case lifecycle with event logs
 - Role-based admin access from the same `/auth` flow via `admins` collection gating
@@ -92,3 +93,4 @@ firebase deploy --only hosting
 - No paid Google Maps API usage; map tiles from OpenStreetMap.
 - All AI inference runs in browser with TensorFlow.js.
 - Public tracking is served from `public_tracks` docs keyed by `caseId + token` to avoid exposing full case listings.
+- Public map is served from `public_map_cases` docs with limited fields (`status`, `animalType`, `urgency`, `lat/lng`).
