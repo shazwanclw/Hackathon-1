@@ -43,6 +43,33 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /animals/{animalId} {
+      allow get, list: if true;
+      allow create: if isAuthed()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.type is string
+        && request.resource.data.coverPhotoUrl is string
+        && request.resource.data.sightingCount is int;
+      allow update, delete: if isAdmin();
+
+      match /sightings/{sightingId} {
+        allow get, list: if true;
+        allow create: if isAuthed()
+          && request.resource.data.authorUid == request.auth.uid
+          && request.resource.data.animalId == animalId
+          && request.resource.data.photoUrl is string;
+        allow update, delete: if isAuthed() && resource.data.authorUid == request.auth.uid;
+
+        match /comments/{commentId} {
+          allow get, list: if true;
+          allow create: if isAuthed()
+            && request.resource.data.authorUid == request.auth.uid
+            && request.resource.data.content is string;
+          allow update, delete: if isAuthed() && resource.data.authorUid == request.auth.uid;
+        }
+      }
+    }
+
     match /case_events/{eventId} {
       allow create: if true
         && request.resource.data.caseId is string

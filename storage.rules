@@ -18,6 +18,14 @@ service firebase.storage {
       allow delete: if isAdmin();
     }
 
+    match /animals/{animalId}/sightings/{fileName} {
+      allow read: if true;
+      allow write: if isAuthed()
+        && request.resource.size < 3 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if isAdmin();
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }

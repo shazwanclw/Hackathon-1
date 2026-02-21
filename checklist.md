@@ -1,73 +1,48 @@
-﻿# StrayLink MVP Checklist
+# StrayLink MVP Checklist
 
-## 0) Foundation Docs
-- [x] Create `prd.md` with complete MVP requirements and architecture.
-- [x] Create `checklist.md` and keep it current during implementation.
+## Existing Case Workflow (Legacy)
+- [x] Legacy report + admin case lifecycle implemented.
+- [ ] Legacy hosting/export constraints still need final resolution.
 
-## 1) Project Bootstrap
-- [x] Initialize Next.js 14+ App Router + TypeScript project structure.
-- [x] Configure TailwindCSS and global styles.
-- [x] Add dependencies in `package.json` (firebase, tfjs, mobilenet, leaflet, react-leaflet, toast lib).
-- [x] Add base lint/type scripts and static export config.
+## New Feature: Stray Feed + Last Seen Map (MVP, no AI merge)
 
-## 2) Core Project Structure
-- [x] Create `/app` routes and shared layouts.
-- [x] Create `/components` reusable UI blocks.
-- [x] Create `/lib` helpers (`firebase.ts`, `tf.ts`, `types.ts`, `auth.ts`, utilities).
-- [x] Add `/styles` map and utility CSS.
+### 1) Planning + Data Contract
+- [x] Define Firestore schema for `animals`, `animals/{animalId}/sightings`, and `comments` under each sighting.
+- [x] Add TypeScript interfaces and helper payload builders for the new schema.
+- [ ] Document final schema in `prd.md` after MVP routes are complete.
 
-## 3) Firebase Setup
-- [x] Install Firebase CLI locally on development machine.
-- [x] Implement Firebase initialization module.
-- [x] Implement Auth helpers for admin login/logout and admin status check.
-- [x] Implement Firestore helpers for CRUD and events.
-- [x] Implement Storage upload helper.
-- [x] Provision Firebase Storage service in project.
-- [x] Add `.env.example` with required `NEXT_PUBLIC_*` keys.
+### 2) Security + Storage Foundations
+- [x] Add Firestore rules for public reads (`animals/sightings/comments`) and auth-required writes.
+- [x] Preserve existing admin-gated collections and behavior.
+- [x] Add Storage path for sighting photos (`animals/{animalId}/sightings/*`) with auth + image/size checks.
+- [ ] Deploy updated rules (`firebase deploy --only firestore:rules,storage`).
 
-## 4) Security Rules and Config
-- [x] Create `firestore.rules` with public-create + tokenized tracking snapshot + admin permissions.
-- [x] Create `storage.rules` with constrained upload/read policy.
-- [x] Add `firebase.json` hosting/firestore/storage configuration.
-- [x] Deploy Firestore and Storage rules.
+### 3) MVP Create Sighting Flow (One sighting = new animal thread)
+- [x] Update `/report` to create a new animal thread with first sighting.
+- [x] Upload photo to Storage and store `photoUrl` + `photoPath`.
+- [x] Capture map location and save as GeoPoint for sighting + animal last seen.
+- [x] Add mobile camera-friendly file input (`accept="image/*" capture="environment"`).
+- [ ] Add automated tests for `/report` submit flow.
 
-## 5) Public Experience
-- [x] Build landing page (`/`).
-- [x] Build public auth page (`/auth`) with login/register/guest flow.
-- [x] Build report form page (`/report`) with validation.
-- [x] Build public map page (`/map`) showing all case markers from public snapshots.
-- [x] Build upload dropzone with 3MB limit and friendly errors.
-- [x] Build map picker using Leaflet + OSM.
-- [x] Integrate TFJS classify flow in submit lifecycle.
-- [x] Persist case + events in Firestore.
-- [x] Show success UI with case ID + tracking token link.
-- [x] Build tracking page `/track/[caseId]` with token gate and limited fields.
+### 4) Feed Page (`/feed`)
+- [x] Build feed query over latest sightings (descending by `createdAt`).
+- [x] Render Instagram-style cards with photo, caption, time, type, and links.
+- [x] Add link to `/animal?id=<animalId>` and map focus link.
 
-## 6) Admin Experience
-- [x] Use unified auth page (`/auth`) for admin and public sign-in (Google + email/password), with role-based routing.
-- [x] Build admin dashboard (`/admin/dashboard`) with filters and list.
-- [x] Build case detail page (`/admin/case/[caseId]`) with workflow actions.
-- [x] Build admin map page (`/admin/map`) with filters + markers.
-- [x] Add route guarding for admin-only pages.
+### 5) Animal Profile (`/animal?id=<animalId>`)
+- [x] Render animal header (type, cover image, last seen fields).
+- [x] Render timeline/gallery of all sightings (newest first).
+- [ ] Show location history list (and mini map if feasible in MVP).
+- [ ] Add comment composer + list under sightings.
 
-## 7) Shared Components
-- [x] `Navbar`
-- [x] `CaseCard`
-- [x] `StatusBadge`
-- [x] `UploadDropzone`
-- [x] `MapPicker`
-- [x] `MapView`
-- [x] `FiltersBar`
-- [x] Loading/error/empty state components
+### 6) Public Map (`/map`)
+- [x] Switch marker source to `animals` collection (`lastSeenLocation`).
+- [x] Keep one marker per animal thread.
+- [x] Marker click opens `/animal?id=<animalId>`.
 
-## 8) Documentation
-- [x] Write `README.md` with setup, Firebase provisioning, admin bootstrap, run/deploy.
-- [x] Document static-export limitations and free-tier constraints.
-- [x] Keep `prd.md` synchronized with implementation decisions.
-- [x] Keep `checklist.md` synchronized and tick completed items.
-
-## 9) Validation
-- [ ] Resolve deployment strategy for dynamic routes (refactor to static-safe routing OR switch from `output: export`).
-- [x] Verify TypeScript compile assumptions (core type errors fixed; production build now blocked by static export + dynamic route constraint).
- - [ ] Verify key flows manually (report, track, public auth, public map, admin role routing, status transitions).
-- [ ] Final pass on security/privacy and demo readiness.
+### 7) Verification + Cleanup
+- [ ] Run `npm run test`.
+- [ ] Run `npm run lint`.
+- [ ] Run `npm run typecheck`.
+- [ ] Manual verify: signed-in user can submit sighting and docs appear in Firestore.
+- [ ] Manual verify: public can read map/feed data, unauthenticated write is denied.

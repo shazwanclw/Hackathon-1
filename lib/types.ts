@@ -74,3 +74,74 @@ export interface PublicMapCase {
     lng: number;
   };
 }
+
+export interface AnimalDoc {
+  createdAt?: unknown;
+  createdBy: string;
+  type: AnimalType;
+  coverPhotoUrl: string;
+  lastSeenLocation: {
+    lat: number;
+    lng: number;
+  };
+  lastSeenAt: unknown;
+  sightingCount: number;
+  latestSightingCaption: string;
+  latestSightingPhotoPath: string;
+}
+
+export interface AnimalSightingDoc {
+  createdAt?: unknown;
+  animalId: string;
+  authorUid: string;
+  type: AnimalType;
+  caption: string;
+  photoUrl: string;
+  photoPath: string;
+  location: {
+    lat: number;
+    lng: number;
+  };
+  commentCount: number;
+}
+
+export interface SightingCommentDoc {
+  createdAt?: unknown;
+  authorUid: string;
+  content: string;
+}
+
+export interface FeedSighting {
+  id: string;
+  animalId: string;
+  type: AnimalType;
+  caption: string;
+  photoUrl: string;
+  createdAtLabel: string;
+}
+
+export interface AnimalMapMarker {
+  id: string;
+  type: AnimalType;
+  coverPhotoUrl?: string;
+  location: {
+    lat: number;
+    lng: number;
+  };
+}
+
+export interface AnimalProfile {
+  id: string;
+  type: AnimalType;
+  coverPhotoUrl: string;
+  lastSeenAtLabel: string;
+  sightingCount: number;
+}
+
+export interface AnimalSightingItem {
+  id: string;
+  caption: string;
+  photoUrl: string;
+  createdAtLabel: string;
+  locationLabel: string;
+}

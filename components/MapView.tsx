@@ -1,17 +1,40 @@
-﻿"use client";
+"use client";
 
 import 'leaflet/dist/leaflet.css';
 import '@/styles/leaflet.css';
+import L from 'leaflet';
+import { useRouter } from 'next/navigation';
 import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
 
 type MapCase = {
   id: string;
-  status: string;
-  ai?: { animalType?: string };
+  type?: string;
+  coverPhotoUrl?: string;
   location?: { lat?: number; lng?: number };
 };
 
+const defaultMarkerIcon = L.icon({
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+function buildPhotoMarkerIcon(photoUrl: string) {
+  const safeUrl = photoUrl.replace(/"/g, '%22');
+  return L.divIcon({
+    className: 'animal-photo-marker',
+    html: `<span class="animal-photo-marker__ring"><img src="${safeUrl}" alt="Animal marker" /></span>`,
+    iconSize: [44, 44],
+    iconAnchor: [22, 22],
+  });
+}
+
 export default function MapView({ cases }: { cases: MapCase[] }) {
+  const router = useRouter();
   const points = cases
     .filter((item) => typeof item.location?.lat === 'number' && typeof item.location?.lng === 'number')
     .map((item) => ({ ...item, lat: item.location!.lat as number, lng: item.location!.lng as number }));
@@ -26,10 +49,18 @@ export default function MapView({ cases }: { cases: MapCase[] }) {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         {points.map((item) => (
-          <Marker key={item.id} position={{ lat: item.lat, lng: item.lng }}>
+          <Marker
+            key={item.id}
+            position={{ lat: item.lat, lng: item.lng }}
+            icon={item.coverPhotoUrl ? buildPhotoMarkerIcon(item.coverPhotoUrl) : defaultMarkerIcon}
+            eventHandlers={{
+              click: () => router.push(`/animal?id=${item.id}`),
+            }}
+          >
             <Popup>
-              Case #{item.id}<br />
-              {item.ai?.animalType ?? 'other'} | {item.status}
+              Animal #{item.id}
+              <br />
+              {item.type ?? 'other'}
             </Popup>
           </Marker>
         ))}

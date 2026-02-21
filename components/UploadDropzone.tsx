@@ -6,9 +6,10 @@ type Props = {
   file: File | null;
   onFileChange: (file: File | null) => void;
   error?: string;
+  capture?: 'user' | 'environment';
 };
 
-export default function UploadDropzone({ file, onFileChange, error }: Props) {
+export default function UploadDropzone({ file, onFileChange, error, capture }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   function handleSelect(files: FileList | null) {
@@ -32,6 +33,7 @@ export default function UploadDropzone({ file, onFileChange, error }: Props) {
         ref={inputRef}
         type="file"
         accept="image/*"
+        capture={capture}
         hidden
         onChange={(e) => handleSelect(e.target.files)}
       />
