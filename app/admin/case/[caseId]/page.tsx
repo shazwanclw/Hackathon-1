@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
@@ -243,29 +243,29 @@ export default function AdminCaseDetailPage() {
         <section className="space-y-4">
           <div className="card space-y-3 p-4">
             <div className="flex items-center justify-between">
-              <h1 className="text-xl font-bold">Case #{item.id}</h1>
+              <h1 className="font-[var(--font-display)] text-3xl font-semibold text-brand-900">Case #{item.id}</h1>
               <StatusBadge status={item.status} />
             </div>
-            <p className="text-sm text-slate-600">AI: {item.ai?.animalType ?? 'other'} ({item.ai?.confidence ?? 0})</p>
-            <p className="text-sm text-slate-600">Location: {(item.location?.lat ?? 0).toFixed(5)}, {(item.location?.lng ?? 0).toFixed(5)}</p>
-            <p className="text-sm text-slate-600">Immediate danger: {item.report?.immediateDanger ? 'Yes' : 'No'}</p>
+            <p className="text-sm text-muted">AI: {item.ai?.animalType ?? 'other'} ({item.ai?.confidence ?? 0})</p>
+            <p className="text-sm text-muted">Location: {(item.location?.lat ?? 0).toFixed(5)}, {(item.location?.lng ?? 0).toFixed(5)}</p>
+            <p className="text-sm text-muted">Immediate danger: {item.report?.immediateDanger ? 'Yes' : 'No'}</p>
           </div>
 
           <div className="card space-y-3 p-4">
-            <h2 className="text-lg font-semibold">AI welfare risk screening (not diagnosis)</h2>
-            {!item.aiRisk ? <p className="text-sm text-slate-600">Screening in progress...</p> : null}
+            <h2 className="font-[var(--font-display)] text-2xl font-semibold text-brand-900">AI welfare risk screening (not diagnosis)</h2>
+            {!item.aiRisk ? <p className="text-sm text-muted">Screening in progress...</p> : null}
             {item.aiRisk ? (
               <>
-                <p className="text-sm text-slate-700">Suggested urgency: {item.aiRisk.urgency}</p>
-                <p className="text-sm text-slate-700">Animal type: {item.aiRisk.animalType}</p>
-                <p className="text-sm text-slate-700">Indicators: {(item.aiRisk.visibleIndicators ?? []).join(', ') || 'none'}</p>
-                <p className="text-sm text-slate-600">{item.aiRisk.disclaimer}</p>
+                <p className="text-sm text-brand-900">Suggested urgency: {item.aiRisk.urgency}</p>
+                <p className="text-sm text-brand-900">Animal type: {item.aiRisk.animalType}</p>
+                <p className="text-sm text-brand-900">Indicators: {(item.aiRisk.visibleIndicators ?? []).join(', ') || 'none'}</p>
+                <p className="text-sm text-muted">{item.aiRisk.disclaimer}</p>
               </>
             ) : null}
           </div>
 
           <div className="card grid gap-3 p-4 md:grid-cols-2">
-            <h2 className="md:col-span-2 text-lg font-semibold">Admin override AI risk</h2>
+            <h2 className="md:col-span-2 font-[var(--font-display)] text-2xl font-semibold text-brand-900">Admin override AI risk</h2>
             <select className="input" value={overrideUrgency} onChange={(e) => setOverrideUrgency(e.target.value as Urgency)}>
               <option value="low">Low</option>
               <option value="medium">Medium</option>
@@ -290,7 +290,7 @@ export default function AdminCaseDetailPage() {
           </div>
 
           <form onSubmit={verifyCase} className="card grid gap-3 p-4 md:grid-cols-2">
-            <h2 className="md:col-span-2 text-lg font-semibold">Verify Case</h2>
+            <h2 className="md:col-span-2 font-[var(--font-display)] text-2xl font-semibold text-brand-900">Verify Case</h2>
             <select className="input" value={animalType} onChange={(e) => setAnimalType(e.target.value as AnimalType)}>
               <option value="cat">Cat</option>
               <option value="dog">Dog</option>
@@ -306,13 +306,13 @@ export default function AdminCaseDetailPage() {
           </form>
 
           <div className="card grid gap-3 p-4 md:grid-cols-2">
-            <h2 className="md:col-span-2 text-lg font-semibold">Assign Case</h2>
+            <h2 className="md:col-span-2 font-[var(--font-display)] text-2xl font-semibold text-brand-900">Assign Case</h2>
             <input className="input" placeholder="Team member name" value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)} />
             <button className="btn-primary" disabled={saving} type="button" onClick={assignCase}>Assign</button>
           </div>
 
           <div className="card grid gap-3 p-4 md:grid-cols-2">
-            <h2 className="md:col-span-2 text-lg font-semibold">Resolve or Reject</h2>
+            <h2 className="md:col-span-2 font-[var(--font-display)] text-2xl font-semibold text-brand-900">Resolve or Reject</h2>
             <select className="input" value={resolutionOutcome} onChange={(e) => setResolutionOutcome(e.target.value as ResolutionOutcome)}>
               <option value="rescued">Rescued</option>
               <option value="treated">Treated</option>

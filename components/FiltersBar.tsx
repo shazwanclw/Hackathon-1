@@ -1,5 +1,3 @@
-﻿"use client";
-
 import { AnimalType, CaseStatus, Urgency } from '@/lib/types';
 
 type Props = {
@@ -11,7 +9,7 @@ type Props = {
 
 export default function FiltersBar({ status, urgency, animalType, onChange }: Props) {
   return (
-    <div className="card grid gap-3 p-3 sm:grid-cols-3">
+    <div className="card grid gap-3 p-4 sm:grid-cols-3">
       <select className="input" value={status} onChange={(e) => onChange('status', e.target.value)}>
         <option value="all">All statuses</option>
         <option value="new">New</option>

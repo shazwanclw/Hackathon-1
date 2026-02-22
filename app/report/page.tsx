@@ -213,22 +213,22 @@ export default function ReportPage() {
   return (
     <PublicAccessGuard>
       <section className="mx-auto max-w-2xl space-y-5">
-        <h1 className="text-2xl font-bold">Submit a New Sighting</h1>
-        <p className="text-sm text-slate-600">For MVP, each new sighting creates a new animal thread.</p>
+        <h1 className="page-title">Submit a New Sighting</h1>
+        <p className="page-subtitle">For MVP, each new sighting creates a new animal thread.</p>
 
-        {authLoading ? <p className="text-sm text-slate-500">Checking sign-in status...</p> : null}
+        {authLoading ? <p className="text-sm text-muted">Checking sign-in status...</p> : null}
 
         {!authLoading && !user ? (
-          <div className="card border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <div className="card border-honey-300 bg-honey-100/80 p-4 text-sm text-brand-900">
             <p className="font-semibold">Sign-in required</p>
             <p>Please sign in to create sightings.</p>
-            <Link className="mt-2 inline-block underline" href="/auth">
+            <Link className="link-inline mt-2 inline-block" href="/auth">
               Go to auth
             </Link>
           </div>
         ) : null}
 
-        <form onSubmit={onSubmit} className="space-y-4">
+        <form onSubmit={onSubmit} className="card space-y-4 p-5">
           <UploadDropzone file={file} onFileChange={handleFileChange} error={fileError} capture="environment" />
 
           <div className="space-y-2">
@@ -236,35 +236,35 @@ export default function ReportPage() {
             <div className="flex gap-2">
               <button
                 type="button"
-                className={`rounded-md px-3 py-2 text-sm ${locationMode === 'auto' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'}`}
+                className={locationMode === 'auto' ? 'segment-active' : 'segment'}
                 onClick={() => setLocationMode('auto')}
               >
                 Auto detect
               </button>
               <button
                 type="button"
-                className={`rounded-md px-3 py-2 text-sm ${locationMode === 'manual' ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'}`}
+                className={locationMode === 'manual' ? 'segment-active' : 'segment'}
                 onClick={() => setLocationMode('manual')}
               >
                 Manual
               </button>
             </div>
-            <p className="text-xs text-slate-500">{locationMessage}</p>
-            {location ? <p className="text-xs text-slate-500">Selected: {location.lat.toFixed(5)}, {location.lng.toFixed(5)}</p> : null}
+            <p className="text-xs text-muted">{locationMessage}</p>
+            {location ? <p className="text-xs text-muted">Selected: {location.lat.toFixed(5)}, {location.lng.toFixed(5)}</p> : null}
           </div>
 
           {locationMode === 'manual' ? (
             <div>
               <label className="label">Select location on map</label>
               <MapPicker value={location} onChange={setLocation} />
-              <p className="mt-1 text-xs text-slate-500">Click map to place marker.</p>
+              <p className="mt-1 text-xs text-muted">Click map to place marker.</p>
             </div>
           ) : null}
 
           <div>
             <label className="label">Caption (optional)</label>
             <textarea
-              className="input min-h-20"
+              className="input min-h-24"
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               placeholder="Seen near the bus stop around 7pm."
@@ -278,11 +278,11 @@ export default function ReportPage() {
       </section>
 
       {showSuccessModal && submitState ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl">
-            <h2 className="text-xl font-bold text-slate-900">Submission Successful</h2>
-            <p className="mt-2 text-sm text-slate-700">Your report was submitted. AI screening is running in the background.</p>
-            <div className="mt-3 space-y-1 text-sm text-slate-700">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-900/45 p-4">
+          <div className="card-elevated w-full max-w-md">
+            <h2 className="font-[var(--font-display)] text-3xl font-semibold text-brand-900">Submission Successful</h2>
+            <p className="mt-2 text-sm text-muted">Your report was submitted. AI screening is running in the background.</p>
+            <div className="mt-3 space-y-1 text-sm text-brand-900">
               <p>Case ID: {submitState.caseId}</p>
               <p>Animal ID: {submitState.animalId}</p>
             </div>

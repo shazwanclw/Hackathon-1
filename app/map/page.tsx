@@ -38,11 +38,11 @@ export default function PublicMapPage() {
   return (
     <PublicAccessGuard>
       <section className="space-y-4">
-      <h1 className="text-2xl font-bold">Community Map</h1>
-      <p className="text-sm text-slate-600">One marker per animal thread at its latest known location.</p>
-      {loading ? <LoadingState text="Loading map points..." /> : null}
-      {!loading && error ? <ErrorState text={error} /> : null}
-      {!loading && !error ? <MapView cases={items} /> : null}
+        <h1 className="page-title">Community Map</h1>
+        <p className="page-subtitle">One marker per animal thread at its latest known location.</p>
+        {loading ? <LoadingState text="Loading map points..." /> : null}
+        {!loading && error ? <ErrorState text={error} /> : null}
+        {!loading && !error ? <MapView cases={items} /> : null}
       </section>
     </PublicAccessGuard>
   );

@@ -38,14 +38,14 @@ export default function FeedPage() {
   return (
     <PublicAccessGuard>
       <section className="mx-auto max-w-2xl space-y-4">
-        <h1 className="text-2xl font-bold">Stray Feed</h1>
-        <p className="text-sm text-slate-600">Latest community sightings, newest first.</p>
+        <h1 className="page-title">Stray Feed</h1>
+        <p className="page-subtitle">Latest community sightings, newest first.</p>
 
         {loading ? <LoadingState text="Loading feed..." /> : null}
         {!loading && error ? <ErrorState text={error} /> : null}
 
         {!loading && !error && items.length === 0 ? (
-          <div className="card p-4 text-sm text-slate-600">No sightings yet.</div>
+          <div className="card p-4 text-sm text-muted">No sightings yet.</div>
         ) : null}
 
         {!loading && !error
@@ -56,11 +56,11 @@ export default function FeedPage() {
                   <img src={item.photoUrl} alt={`${item.type} sighting`} className="h-72 w-full object-cover" />
                 ) : null}
                 <div className="space-y-2 p-4 text-sm">
-                  <p className="font-semibold capitalize">{item.type}</p>
-                  <p className="text-xs text-slate-700">
+                  <p className="font-semibold capitalize text-brand-900">{item.type}</p>
+                  <p className="text-xs text-muted">
                     Reported by:{' '}
                     {item.reporterUid ? (
-                      <Link className="underline" href={`/profile?uid=${item.reporterUid}`}>
+                      <Link className="link-inline" href={`/profile?uid=${item.reporterUid}`}>
                         {item.reporterEmail}
                       </Link>
                     ) : (
@@ -68,18 +68,18 @@ export default function FeedPage() {
                     )}
                   </p>
                   {item.aiRiskUrgency ? (
-                    <p className="text-xs text-slate-700">
-                      AI risk: <span className="font-semibold capitalize">{item.aiRiskUrgency}</span>
+                    <p className="text-xs text-muted">
+                      AI risk: <span className="font-semibold capitalize text-brand-900">{item.aiRiskUrgency}</span>
                     </p>
                   ) : null}
-                  {item.aiRiskReasonPreview ? <p className="text-xs text-slate-600">{item.aiRiskReasonPreview}...</p> : null}
-                  <p>{item.caption || 'No caption provided.'}</p>
-                  <p className="text-xs text-slate-500">{item.createdAtLabel}</p>
+                  {item.aiRiskReasonPreview ? <p className="text-xs text-muted">{item.aiRiskReasonPreview}...</p> : null}
+                  <p className="text-brand-900">{item.caption || 'No caption provided.'}</p>
+                  <p className="text-xs text-brand-800/70">{item.createdAtLabel}</p>
                   <div className="flex gap-4 text-sm">
-                    <Link className="underline" href={`/animal?id=${item.animalId}`}>
+                    <Link className="link-inline" href={`/animal?id=${item.animalId}`}>
                       Open animal profile
                     </Link>
-                    <Link className="underline" href={`/map?animalId=${item.animalId}`}>
+                    <Link className="link-inline" href={`/map?animalId=${item.animalId}`}>
                       View on map
                     </Link>
                   </div>

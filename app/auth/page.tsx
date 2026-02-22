@@ -79,12 +79,12 @@ export default function AuthPage() {
 
   return (
     <section className="mx-auto max-w-md py-6">
-      <div className="card space-y-4 p-5">
+      <div className="card-elevated space-y-4">
         <div className="flex gap-2">
           <button
             type="button"
             aria-label="Switch to login"
-            className={`rounded-md px-3 py-1.5 text-sm ${mode === 'login' ? 'bg-brand-100 text-brand-900' : 'bg-slate-100 text-slate-700'}`}
+            className={mode === 'login' ? 'segment-active' : 'segment'}
             onClick={() => setMode('login')}
           >
             Login
@@ -92,14 +92,14 @@ export default function AuthPage() {
           <button
             type="button"
             aria-label="Switch to register"
-            className={`rounded-md px-3 py-1.5 text-sm ${mode === 'register' ? 'bg-brand-100 text-brand-900' : 'bg-slate-100 text-slate-700'}`}
+            className={mode === 'register' ? 'segment-active' : 'segment'}
             onClick={() => setMode('register')}
           >
             Register
           </button>
         </div>
 
-        <h1 className="text-2xl font-bold">{title}</h1>
+        <h1 className="font-[var(--font-display)] text-4xl font-semibold text-brand-900">{title}</h1>
 
         <button className="btn-secondary w-full" type="button" onClick={onGoogleSignIn} disabled={submitting}>
           {submitting ? 'Please wait...' : 'Continue with Google'}
@@ -107,35 +107,35 @@ export default function AuthPage() {
 
         <form className="space-y-3" onSubmit={onSubmit}>
           <div className="space-y-1">
-            <label htmlFor="email" className="text-sm font-medium text-slate-700">Email</label>
+            <label htmlFor="email" className="label">Email</label>
             <input
               id="email"
               type="email"
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
           <div className="space-y-1">
-            <label htmlFor="password" className="text-sm font-medium text-slate-700">Password</label>
+            <label htmlFor="password" className="label">Password</label>
             <input
               id="password"
               type="password"
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               minLength={6}
               required
             />
           </div>
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+          {error ? <p className="text-sm text-rose-700">{error}</p> : null}
           <button className="btn-primary w-full" type="submit" disabled={submitting}>
             {submitting ? 'Please wait...' : mode === 'login' ? 'Login' : 'Create Account'}
           </button>
         </form>
 
-        <button className="btn-secondary w-full" type="button" onClick={onGuest}>
+        <button className="btn-ghost w-full" type="button" onClick={onGuest}>
           Join as Guest
         </button>
       </div>

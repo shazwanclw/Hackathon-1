@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
@@ -36,7 +36,7 @@ export default function AdminMapPage() {
   return (
     <AdminGuard>
       <section className="space-y-4">
-        <h1 className="text-2xl font-bold">Admin Map</h1>
+        <h1 className="page-title">Admin Map</h1>
         <FiltersBar
           status={filters.status}
           urgency={filters.urgency}

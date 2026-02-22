@@ -59,33 +59,32 @@ export default function TrackPage() {
       {!loading && !error && !caseItem ? <ErrorState text="Case not found." /> : null}
       {!loading && !error && caseItem ? (
         <section className="mx-auto max-w-xl space-y-4">
-          <h1 className="text-2xl font-bold">Track Case</h1>
+          <h1 className="page-title">Track Case</h1>
           <div className="card space-y-3 p-4">
-            <p className="text-sm text-slate-600">Case ID: {caseItem.caseId ?? caseItem.id}</p>
+            <p className="text-sm text-muted">Case ID: {caseItem.caseId ?? caseItem.id}</p>
             <StatusBadge status={caseItem.status} />
-            <p className="text-sm">
+            <p className="text-sm text-brand-900">
               Animal type (AI): <span className="font-semibold">{caseItem.ai?.animalType ?? 'other'}</span>
             </p>
-            <p className="text-sm">Urgency: {caseItem.triage?.urgency ?? 'low'}</p>
-            <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-              <p className="text-sm font-semibold">AI welfare risk screening (not diagnosis)</p>
-              {!caseItem.aiRisk ? <p className="mt-1 text-sm text-slate-600">Screening in progress...</p> : null}
+            <p className="text-sm text-brand-900">Urgency: {caseItem.triage?.urgency ?? 'low'}</p>
+            <div className="rounded-xl border border-brand-300 bg-brand-100/55 p-3">
+              <p className="text-sm font-semibold text-brand-900">AI welfare risk screening (not diagnosis)</p>
+              {!caseItem.aiRisk ? <p className="mt-1 text-sm text-muted">Screening in progress...</p> : null}
               {caseItem.aiRisk ? (
-                <div className="mt-2 space-y-1 text-sm">
+                <div className="mt-2 space-y-1 text-sm text-brand-900">
                   <p>
                     Urgency suggestion: <span className="font-semibold">{caseItem.aiRisk.urgency}</span>
                   </p>
                   <p>Indicators: {(caseItem.aiRisk.visibleIndicators ?? []).join(', ') || 'none'}</p>
-                  <p className="text-slate-600">{caseItem.aiRisk.disclaimer}</p>
+                  <p className="text-muted">{caseItem.aiRisk.disclaimer}</p>
                 </div>
               ) : null}
             </div>
-            <p className="text-sm text-slate-600">Assigned team: {caseItem.assignedTo || 'Not assigned yet'}</p>
-            {caseItem.resolution ? <p className="text-sm">Resolution: {caseItem.resolution.outcome}</p> : null}
+            <p className="text-sm text-muted">Assigned team: {caseItem.assignedTo || 'Not assigned yet'}</p>
+            {caseItem.resolution ? <p className="text-sm text-brand-900">Resolution: {caseItem.resolution.outcome}</p> : null}
           </div>
         </section>
       ) : null}
     </PublicAccessGuard>
   );
 }
-

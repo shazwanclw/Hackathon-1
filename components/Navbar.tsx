@@ -46,25 +46,24 @@ export default function Navbar() {
   if (user) {
     links.push({ href: '/profile', label: 'Profile' });
   }
-
   if (admin) {
     links.push({ href: '/admin/dashboard', label: 'Admin' });
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
-      <div className="container-shell flex h-14 items-center justify-between">
-        <Link href="/" className="text-lg font-bold text-brand-700">
+    <header className="sticky top-0 z-30 border-b border-brand-300/80 bg-[rgba(255,247,230,0.92)] backdrop-blur-md">
+      <div className="container-shell flex min-h-16 items-center justify-between gap-3 py-2">
+        <Link href="/" className="font-[var(--font-display)] text-3xl font-semibold tracking-tight text-brand-900">
           StrayLink
         </Link>
-        <nav className="flex items-center gap-2">
+        <nav className="flex flex-wrap items-center justify-end gap-2">
           {links.map((item) => {
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`rounded-md px-3 py-1.5 text-sm ${active ? 'bg-brand-100 text-brand-900' : 'text-slate-600 hover:bg-slate-100'}`}
+                className={active ? 'segment-active' : 'segment'}
               >
                 {item.label}
               </Link>
@@ -73,7 +72,7 @@ export default function Navbar() {
           {!user && !guest ? (
             <Link
               href="/auth"
-              className={`rounded-md px-3 py-1.5 text-sm ${pathname === '/auth' ? 'bg-brand-100 text-brand-900' : 'text-slate-600 hover:bg-slate-100'}`}
+              className={pathname === '/auth' ? 'segment-active' : 'segment'}
             >
               Login
             </Link>
@@ -90,7 +89,7 @@ export default function Navbar() {
                 setAdmin(false);
                 router.push('/');
               }}
-              className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
+              className="btn-ghost"
             >
               {user ? 'Logout' : 'Exit Guest'}
             </button>

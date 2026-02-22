@@ -42,7 +42,7 @@ export default function MapView({ cases }: { cases: MapCase[] }) {
   const center = points[0] ? { lat: points[0].lat, lng: points[0].lng } : { lat: 3.1390, lng: 101.6869 };
 
   return (
-    <div className="h-[65vh] overflow-hidden rounded-xl border border-slate-200">
+    <div className="h-[65vh] overflow-hidden rounded-2xl border border-brand-300/80 shadow-[0_14px_34px_rgba(80,55,27,0.2)]">
       <MapContainer center={center} zoom={points[0] ? 12 : 6} scrollWheelZoom className="h-full w-full">
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'

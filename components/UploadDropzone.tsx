@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useRef } from 'react';
 
@@ -23,11 +23,11 @@ export default function UploadDropzone({ file, onFileChange, error, capture }: P
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        className="card flex w-full flex-col items-center justify-center gap-2 border-dashed p-6 text-center hover:border-brand-500"
+        className="card flex w-full flex-col items-center justify-center gap-2 border-dashed border-brand-400/80 p-6 text-center hover:border-brand-600"
       >
-        <p className="text-sm font-semibold text-slate-700">Click to upload image</p>
-        <p className="text-xs text-slate-500">JPG/PNG/WebP supported</p>
-        <p className="text-xs text-brand-700">{file ? file.name : 'No file selected'}</p>
+        <p className="text-sm font-semibold text-brand-900">Tap to upload image</p>
+        <p className="text-xs text-muted">JPG/PNG/WebP supported</p>
+        <p className="text-xs font-semibold text-brand-700">{file ? file.name : 'No file selected'}</p>
       </button>
       <input
         ref={inputRef}
@@ -37,7 +37,7 @@ export default function UploadDropzone({ file, onFileChange, error, capture }: P
         hidden
         onChange={(e) => handleSelect(e.target.files)}
       />
-      {error ? <p className="mt-1 text-xs text-rose-600">{error}</p> : null}
+      {error ? <p className="mt-1 text-xs text-rose-700">{error}</p> : null}
     </div>
   );
 }

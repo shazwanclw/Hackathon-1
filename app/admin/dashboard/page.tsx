@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from 'react';
 import AdminGuard from '@/components/AdminGuard';
@@ -34,7 +34,7 @@ export default function DashboardPage() {
   return (
     <AdminGuard>
       <section className="space-y-4">
-        <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+        <h1 className="page-title">Admin Dashboard</h1>
         <FiltersBar
           status={filters.status}
           urgency={filters.urgency}
