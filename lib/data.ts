@@ -16,7 +16,7 @@ import {
 } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { db, storage } from './firebase';
-import { AnimalDoc, AnimalMapMarker, AnimalProfile, AnimalSightingDoc, AnimalSightingItem, AnimalType, CaseDoc, CaseEvent, CaseFilters, FeedSighting, PublicMapCase, RiskAnimalType, Urgency } from './types';
+import { AnimalDoc, AnimalMapMarker, AnimalProfile, AnimalSightingDoc, AnimalSightingItem, AnimalType, CaseDoc, CaseEvent, CaseFilters, FeedSighting, PublicMapCase, RiskAnimalType, Urgency, UserProfileSummary } from './types';
 
 export function getSessionId() {
   const key = 'straylink_session_id';
@@ -68,6 +68,7 @@ type NewAnimalPayloadInput = {
   photoPath: string;
   location: { lat: number; lng: number };
   authorUid: string;
+  authorEmail: string;
 };
 
 type NewCasePayloadInput = {
@@ -95,11 +96,13 @@ type NewSightingPayloadInput = {
   photoPath: string;
   location: { lat: number; lng: number };
   authorUid: string;
+  authorEmail: string;
 };
 
 export function buildNewAnimalPayload(input: NewAnimalPayloadInput) {
   return {
     createdBy: input.authorUid,
+    createdByEmail: input.authorEmail,
     type: input.type,
     coverPhotoUrl: input.photoUrl,
     lastSeenLocation: {
@@ -117,6 +120,7 @@ export function buildNewSightingPayload(input: NewSightingPayloadInput) {
   return {
     animalId: input.animalId,
     authorUid: input.authorUid,
+    authorEmail: input.authorEmail,
     type: input.type,
     caption: input.caption,
     photoUrl: input.photoUrl,
@@ -200,6 +204,7 @@ export async function createAnimalWithFirstSighting(input: NewSightingPayloadInp
     photoPath: input.photoPath,
     location: input.location,
     authorUid: input.authorUid,
+    authorEmail: input.authorEmail,
   });
 
   const sightingPayload = buildNewSightingPayload(input);
@@ -325,30 +330,34 @@ export async function updateCase(caseId: string, changes: Record<string, unknown
 
 export async function listFeedSightings(): Promise<FeedSighting[]> {
   const snaps = await getDocs(query(collection(db, 'animals'), orderBy('createdAt', 'desc'), limit(100)));
+  return snaps.docs.map((snap) => mapAnimalDocToFeedSighting(snap.id, snap.data() as Record<string, unknown>));
+}
 
-  return snaps.docs.map((snap) => {
+export async function listUserFeedSightings(uid: string): Promise<FeedSighting[]> {
+  const snaps = await getDocs(query(collection(db, 'animals'), where('createdBy', '==', uid), limit(200)));
+  const rows = snaps.docs.map((snap) => {
     const data = snap.data() as Record<string, unknown>;
-    const rawCreatedAt = data.createdAt as { toDate?: () => Date } | undefined;
-    const createdAt = typeof rawCreatedAt?.toDate === 'function' ? rawCreatedAt.toDate() : null;
-    const createdAtLabel = createdAt ? createdAt.toLocaleString() : 'Just now';
-
+    const mapped = mapAnimalDocToFeedSighting(snap.id, data);
     return {
-      id: snap.id,
-      animalId: snap.id,
-      type: (data.type as AnimalType) ?? 'other',
-      caption: String(data.latestSightingCaption ?? ''),
-      photoUrl: String(data.coverPhotoUrl ?? ''),
-      createdAtLabel,
-      aiRiskUrgency:
-        data.aiRisk && typeof (data.aiRisk as Record<string, unknown>).urgency === 'string'
-          ? ((data.aiRisk as Record<string, unknown>).urgency as FeedSighting['aiRiskUrgency'])
-          : undefined,
-      aiRiskReasonPreview:
-        data.aiRisk && typeof (data.aiRisk as Record<string, unknown>).reason === 'string'
-          ? String((data.aiRisk as Record<string, unknown>).reason).slice(0, 120)
-          : undefined,
+      ...mapped,
+      createdAtTs: extractCreatedAtTimestamp(data),
     };
   });
+
+  rows.sort((a, b) => b.createdAtTs - a.createdAtTs);
+  return rows.map(({ createdAtTs: _createdAtTs, ...row }) => row);
+}
+
+export async function getUserProfileSummary(uid: string): Promise<UserProfileSummary> {
+  const snaps = await getDocs(query(collection(db, 'animals'), where('createdBy', '==', uid), limit(200)));
+  const docs = snaps.docs.map((snap) => snap.data() as Record<string, unknown>);
+  const firstWithEmail = docs.find((item) => typeof item.createdByEmail === 'string' && item.createdByEmail);
+
+  return {
+    uid,
+    email: firstWithEmail ? String(firstWithEmail.createdByEmail) : 'Unknown reporter',
+    reportCount: snaps.size,
+  };
 }
 
 export async function listAnimalMapMarkers(): Promise<AnimalMapMarker[]> {
@@ -454,4 +463,36 @@ export async function listAnimalSightings(animalId: string): Promise<AnimalSight
       locationLabel,
     };
   });
+}
+
+function mapAnimalDocToFeedSighting(animalId: string, data: Record<string, unknown>): FeedSighting {
+  const createdAt = extractCreatedAt(data);
+  const createdAtLabel = createdAt ? createdAt.toLocaleString() : 'Just now';
+  return {
+    id: animalId,
+    animalId,
+    reporterUid: String(data.createdBy ?? ''),
+    reporterEmail: String(data.createdByEmail ?? 'Unknown reporter'),
+    type: (data.type as AnimalType) ?? 'other',
+    caption: String(data.latestSightingCaption ?? ''),
+    photoUrl: String(data.coverPhotoUrl ?? ''),
+    createdAtLabel,
+    aiRiskUrgency:
+      data.aiRisk && typeof (data.aiRisk as Record<string, unknown>).urgency === 'string'
+        ? ((data.aiRisk as Record<string, unknown>).urgency as FeedSighting['aiRiskUrgency'])
+        : undefined,
+    aiRiskReasonPreview:
+      data.aiRisk && typeof (data.aiRisk as Record<string, unknown>).reason === 'string'
+        ? String((data.aiRisk as Record<string, unknown>).reason).slice(0, 120)
+        : undefined,
+  };
+}
+
+function extractCreatedAt(data: Record<string, unknown>): Date | null {
+  const rawCreatedAt = data.createdAt as { toDate?: () => Date } | undefined;
+  return typeof rawCreatedAt?.toDate === 'function' ? rawCreatedAt.toDate() : null;
+}
+
+function extractCreatedAtTimestamp(data: Record<string, unknown>): number {
+  return extractCreatedAt(data)?.getTime() ?? 0;
 }

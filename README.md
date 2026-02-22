@@ -5,21 +5,19 @@ StrayLink is a free-tier web MVP for reporting stray animals/urban wildlife and 
 ## Stack
 - Next.js 14 (App Router) + TypeScript + TailwindCSS
 - Firebase Web SDK (Auth, Firestore, Storage)
-- TensorFlow.js + MobileNet (in-browser)
 - Firebase Cloud Functions + Gemini (server-side welfare risk screening)
 - Leaflet + OpenStreetMap tiles
 
 ## Features
 - Public homepage (`/`) with mission/goals and a single `Login / Join` CTA
 - Unified auth (`/auth`): email/password login, registration, Google sign-in, or join as guest
-- Public report flow: photo upload, map click location, behavior + danger metadata
+- Public report flow: photo upload, auto-detect location (default) or manual map pin, optional caption
 - Public map (`/map`) showing all submitted case markers from limited public snapshot data
-- Client-side AI auto-tag to `cat|dog|other`
-- Server-side Gemini welfare risk screening (`aiRisk`) with strict non-diagnostic output
+- Gemini classifies animal type (`cat|dog|other`) and runs non-diagnostic welfare risk screening (`aiRisk`) server-side
 - Firestore case lifecycle with event logs
 - Role-based admin access from the same `/auth` flow via `admins` collection gating
 - Admin dashboard, case detail actions, map view
-- Public tracking via case ID + tracking token
+- Public tracking via query route: `/track?caseId=<id>&t=<token>`
 
 ## Project Structure
 - `app/` routes (public + admin)
@@ -101,8 +99,34 @@ To deploy Gemini risk screening trigger:
 firebase deploy --only functions
 ```
 
-## Gemini non-diagnostic welfare risk screening
-- TFJS MobileNet remains unchanged for fast in-browser animal auto-tagging (`cases/{caseId}.ai`).
+## One-time backfill for reporter emails
+If you added reporter profile links after reports already existed, older `animals/{animalId}` docs may be missing `createdByEmail`.
+
+Run from the `functions/` folder:
+```bash
+npm run backfill:reporter-emails
+```
+This is a dry-run and prints what would change.
+
+Apply writes:
+```bash
+npm run backfill:reporter-emails -- --write
+```
+The script resolves each missing email from Firebase Auth using `createdBy` (UID) and updates `animals/{animalId}.createdByEmail`.
+
+If you see credential/project errors, run with explicit options:
+```bash
+npm run backfill:reporter-emails -- --project kita-hack-hackathon --credentials C:\\path\\to\\service-account.json --write
+```
+Or configure ADC once:
+```bash
+gcloud auth application-default login
+```
+
+## Gemini non-diagnostic AI flow
+- Report submit is immediate; AI processing continues asynchronously in Cloud Functions.
+- Animal type and risk screening are both produced by Gemini.
+- `cases/{caseId}.ai` is updated by Gemini and mirrored to `public_tracks` / `public_map_cases`.
 - A Firestore-triggered Cloud Function enriches new cases with `cases/{caseId}.aiRisk` using Gemini vision.
 - Gemini is used only server-side (no API key in browser).
 - Output is strictly non-diagnostic triage guidance:
@@ -115,7 +139,6 @@ firebase deploy --only functions
 ## Notes on free-tier constraints
 - No Cloud Run required.
 - No paid Google Maps API usage; map tiles from OpenStreetMap.
-- TFJS animal-type inference runs in browser; Gemini risk screening runs in Firebase Functions.
-- Gemini risk screening runs in Firebase Functions and does not diagnose disease/infections.
+- Gemini classification and risk screening run in Firebase Functions and do not diagnose disease/infections.
 - Public tracking is served from `public_tracks` docs keyed by `caseId + token` to avoid exposing full case listings.
 - Public map is served from `public_map_cases` docs with limited fields (`status`, `animalType`, `urgency`, `lat/lng`).

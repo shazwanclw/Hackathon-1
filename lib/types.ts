@@ -39,7 +39,7 @@ export interface CaseDoc {
     note: string;
   };
   ai: {
-    model: 'tfjs-mobilenet';
+    model: string;
     animalType: AnimalType;
     confidence: number;
     rawTopLabel: string;
@@ -104,6 +104,7 @@ export interface PublicMapCase {
 export interface AnimalDoc {
   createdAt?: unknown;
   createdBy: string;
+  createdByEmail: string;
   type: AnimalType;
   coverPhotoUrl: string;
   lastSeenLocation: {
@@ -124,6 +125,7 @@ export interface AnimalSightingDoc {
   createdAt?: unknown;
   animalId: string;
   authorUid: string;
+  authorEmail: string;
   type: AnimalType;
   caption: string;
   photoUrl: string;
@@ -144,12 +146,20 @@ export interface SightingCommentDoc {
 export interface FeedSighting {
   id: string;
   animalId: string;
+  reporterUid: string;
+  reporterEmail: string;
   type: AnimalType;
   caption: string;
   photoUrl: string;
   createdAtLabel: string;
   aiRiskUrgency?: Urgency;
   aiRiskReasonPreview?: string;
+}
+
+export interface UserProfileSummary {
+  uid: string;
+  email: string;
+  reportCount: number;
 }
 
 export interface AnimalMapMarker {

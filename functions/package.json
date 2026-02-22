@@ -7,7 +7,8 @@
   "main": "src/index.js",
   "scripts": {
     "lint": "echo \"No lint configured\"",
-    "deploy": "firebase deploy --only functions"
+    "deploy": "firebase deploy --only functions",
+    "backfill:reporter-emails": "node scripts/backfill-reporter-emails.js"
   },
   "dependencies": {
     "firebase-admin": "^13.1.0",

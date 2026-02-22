@@ -49,6 +49,10 @@ function buildAdminOverride() {
   };
 }
 
+function toAnimalType(value) {
+  return value === 'cat' || value === 'dog' || value === 'other' ? value : 'other';
+}
+
 function parseGeminiRiskJson(rawText) {
   let parsed;
   try {
@@ -231,9 +235,16 @@ exports.screenCaseAiRisk = onDocumentWritten(
         processing: FieldValue.delete(),
         adminOverride: buildAdminOverride(),
       };
+      const finalAnimalType = toAnimalType(parsed.animalType);
 
       await caseRef.set(
         {
+          ai: {
+            model,
+            animalType: finalAnimalType,
+            confidence: parsed.confidence,
+            rawTopLabel: parsed.animalType,
+          },
           aiRisk: aiRiskDoc,
           triage: {
             urgency: parsed.urgency,
@@ -248,6 +259,7 @@ exports.screenCaseAiRisk = onDocumentWritten(
       if (animalId) {
         await db.collection('animals').doc(animalId).set(
           {
+            type: finalAnimalType,
             aiRisk: {
               model,
               animalType: parsed.animalType,
@@ -268,6 +280,10 @@ exports.screenCaseAiRisk = onDocumentWritten(
 
       await db.collection('public_tracks').doc(trackId).set(
         {
+          ai: {
+            animalType: finalAnimalType,
+            confidence: parsed.confidence,
+          },
           aiRisk: {
             ...aiRiskDoc,
             createdAt: Timestamp.now(),
@@ -282,6 +298,9 @@ exports.screenCaseAiRisk = onDocumentWritten(
 
       await db.collection('public_map_cases').doc(caseId).set(
         {
+          ai: {
+            animalType: finalAnimalType,
+          },
           triage: {
             urgency: parsed.urgency,
           },
@@ -320,6 +339,12 @@ exports.screenCaseAiRisk = onDocumentWritten(
       };
       await caseRef.set(
         {
+          ai: {
+            model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+            animalType: 'other',
+            confidence: 0,
+            rawTopLabel: 'gemini_error',
+          },
           aiRisk: failedAiRisk,
         },
         { merge: true }

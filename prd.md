@@ -1,7 +1,7 @@
 ﻿# StrayLink PRD (MVP)
 
 ## 1) Product Overview
-StrayLink is a web platform for reporting stray animals and urban wildlife, then routing those reports to NGOs or municipal teams for action. The MVP is built with Next.js, Firebase, TensorFlow.js, and Leaflet/OpenStreetMap, with no paid APIs and no Google Cloud billing requirements.
+StrayLink is a web platform for reporting stray animals and urban wildlife, then routing those reports to NGOs or municipal teams for action. The MVP is built with Next.js, Firebase, Gemini-powered server-side AI, and Leaflet/OpenStreetMap, with no paid APIs and no Google Cloud billing requirements.
 
 Implementation status update (February 20, 2026): Firebase Storage is now provisioned on project `kita-hack-hackathon`, and `storage.rules` has been successfully deployed.
 
@@ -21,7 +21,7 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - Optionally register/login via email and password at `/auth`.
 - Submit a case with photo, location, and incident details.
 - Receive case ID and tracking token.
-- Track limited status via `/track/[caseId]?t=<token>`.
+- Track limited status via `/track?caseId=<caseId>&t=<token>`.
 
 ### Admin / NGO Operator (login required)
 - Authenticate via Firebase Auth at `/auth` (Google sign-in or email/password).
@@ -30,8 +30,9 @@ StrayLink contributes to safer, healthier neighborhoods by:
 
 ## 5) Goals and Non-Goals
 ### Goals (MVP)
-- Public report flow with image upload (<=3MB), map location pick, and metadata.
-- In-browser TFJS inference (MobileNet) mapped to `cat|dog|other`.
+- Public report flow with image upload (<=3MB), location mode (auto-detect default + manual map fallback), and metadata.
+- Server-side Gemini classification mapped to `cat|dog|other`.
+- Server-side Gemini non-diagnostic welfare risk screening.
 - Firestore case lifecycle: `new -> verified -> assigned -> resolved|rejected`.
 - Admin dashboard with filtering and case actions.
 - Leaflet map views for admin operations.
@@ -47,17 +48,17 @@ StrayLink contributes to safer, healthier neighborhoods by:
 ### Public
 - Landing page `/` explains value and calls to action.
 - Public auth page `/auth` provides login, register, and guest-entry actions.
-- Report page `/report` supports photo upload, map click, metadata, and note.
+- Report page `/report` supports photo upload, auto location (default) or manual map pin, and note.
 - Public map page `/map` shows all submitted case markers using limited public snapshot fields.
 - Submission flow:
   1. Validate fields.
   2. Generate `caseId`.
   3. Upload image to Storage.
-  4. Run TFJS classify.
-  5. Write `cases/{caseId}`.
+  4. Write `cases/{caseId}` with pending AI placeholders.
   6. Write `public_tracks/{caseId_token}` limited tracking snapshot.
-  7. Write `case_events` (`created`, `ai_tagged`).
-  8. Return case ID + token.
+  7. Write `case_events` (`submitted`).
+  8. Return case ID + token immediately.
+  9. Background Cloud Function calls Gemini and updates `ai`, `aiRisk`, `triage`, and public snapshots.
 - Track page reads only the `public_tracks` snapshot, never full `cases` doc.
 
 ### Admin
@@ -70,13 +71,15 @@ StrayLink contributes to safer, healthier neighborhoods by:
 ## 7) Data Model
 ### Firestore: `cases/{caseId}`
 - `createdAt`: serverTimestamp
+- `animalId`: string
 - `createdBy`: anonymous session id string
 - `trackingToken`: string
 - `photo`: `{ storagePath, downloadUrl }`
 - `location`: `{ lat, lng, addressText, accuracy: "exact"|"approx" }`
 - `report`: `{ count: "1"|"2-3"|"many", behavior: "calm"|"aggressive"|"unknown", immediateDanger: boolean, note: string }`
-- `ai`: `{ model: "tfjs-mobilenet", animalType: "cat"|"dog"|"other", confidence: number, rawTopLabel: string }`
-- `triage`: `{ urgency: "low"|"medium"|"high", reason: string, needsHumanVerification: true }`
+- `ai`: `{ model: string, animalType: "cat"|"dog"|"other", confidence: number, rawTopLabel: string }`
+- `aiRisk`: `{ model: string, animalType: "cat"|"dog"|"other"|"unknown", visibleIndicators: string[], urgency: "low"|"medium"|"high", reason: string, confidence: number, disclaimer: string, needsHumanVerification: true, createdAt: timestamp, error: string|null, adminOverride: {...} }`
+- `triage`: `{ urgency: "low"|"medium"|"high", reason: string, needsHumanVerification: true, source?: "ai"|"aiRisk"|"admin" }`
 - `status`: `"new"|"verified"|"assigned"|"resolved"|"rejected"`
 - `assignedTo`: string|null
 - `resolution`: `{ outcome: "rescued"|"treated"|"relocated"|"false_report"|"unknown", notes: string, resolvedAt: timestamp } | null`
@@ -86,6 +89,7 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - `caseId`: string
 - `status`: string
 - `ai`: `{ animalType, confidence }`
+- `aiRisk`: `{ ...non-diagnostic risk output... }` (may arrive asynchronously)
 - `triage`: `{ urgency }`
 - `assignedTo`: string|null
 - `resolution`: `{ outcome, notes } | null`
@@ -120,9 +124,9 @@ StrayLink contributes to safer, healthier neighborhoods by:
 ## 9) Architecture
 - Frontend: Next.js 14 App Router, TypeScript, Tailwind.
 - Data/Auth/Storage: Firebase Web SDK v9 modular.
-- AI: TensorFlow.js MobileNet loaded client-side and cached.
+- AI: Gemini via Firebase Cloud Functions for both classification and non-diagnostic welfare risk screening.
 - Maps: Leaflet + OpenStreetMap tiles.
-- Deployment: Local development works with Next.js dev server. Current dynamic routes (`/track/[caseId]`, `/admin/case/[caseId]`) are not compatible with strict static export; for hosting, either refactor to static-safe routes or use a non-export Next hosting strategy.
+- Deployment: Local development works with Next.js dev server. Static export constraints remain for admin dynamic routes (`/admin/case/[caseId]`), while public tracking now uses static-safe query route (`/track?caseId=...&t=...`).
 
 ## 10) Tech Constraints
 - Node 18+
@@ -143,14 +147,15 @@ StrayLink contributes to safer, healthier neighborhoods by:
 
 ## 13) Demo Flow
 1. Public user submits case with photo/location.
-2. AI predicts type in browser.
+2. Submission succeeds immediately; Gemini runs in background.
 3. Case appears in admin dashboard as `new`.
-4. Admin verifies, assigns, resolves.
-5. Public tracking link shows status progression from `public_tracks`.
+4. Gemini updates animal type + welfare risk + triage.
+5. Admin verifies, assigns, resolves.
+6. Public tracking link shows status progression from `public_tracks`.
 6. Admin map visualizes marker hotspots.
 
 ## 14) Risks and Mitigations
-- TFJS model variance -> expose confidence and require human verification.
+- Model variance -> expose confidence and require human verification.
 - Abusive uploads -> 3MB + content-type rules + UI validation.
 - Static export limitations -> client-only Firebase SDK patterns.
 

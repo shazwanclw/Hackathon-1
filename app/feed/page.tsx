@@ -57,6 +57,16 @@ export default function FeedPage() {
                 ) : null}
                 <div className="space-y-2 p-4 text-sm">
                   <p className="font-semibold capitalize">{item.type}</p>
+                  <p className="text-xs text-slate-700">
+                    Reported by:{' '}
+                    {item.reporterUid ? (
+                      <Link className="underline" href={`/profile?uid=${item.reporterUid}`}>
+                        {item.reporterEmail}
+                      </Link>
+                    ) : (
+                      <span>{item.reporterEmail}</span>
+                    )}
+                  </p>
                   {item.aiRiskUrgency ? (
                     <p className="text-xs text-slate-700">
                       AI risk: <span className="font-semibold capitalize">{item.aiRiskUrgency}</span>

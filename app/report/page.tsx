@@ -21,7 +21,6 @@ import {
   setPublicTrackSnapshot,
   uploadCaseImage,
 } from '@/lib/data';
-import { classifyImage } from '@/lib/tf';
 
 const MapPicker = dynamic(() => import('@/components/MapPicker'), { ssr: false });
 
@@ -131,7 +130,12 @@ export default function ReportPage() {
       const caseId = await createCaseId();
       const trackingToken = createTrackingToken();
       const photo = await uploadCaseImage(caseId, file);
-      const ai = await classifyImage(file);
+      const pendingAi = {
+        model: 'gemini-pending',
+        animalType: 'other' as const,
+        confidence: 0,
+        rawTopLabel: 'pending_gemini_classification',
+      };
 
       await setCase(
         caseId,
@@ -142,7 +146,7 @@ export default function ReportPage() {
           photo,
           location,
           note: caption.trim(),
-          ai,
+          ai: pendingAi,
         })
       );
 
@@ -151,8 +155,8 @@ export default function ReportPage() {
         caseId,
         status: 'new',
         ai: {
-          animalType: ai.animalType,
-          confidence: ai.confidence,
+          animalType: 'other',
+          confidence: 0,
         },
         triage: {
           urgency: 'medium',
@@ -164,7 +168,7 @@ export default function ReportPage() {
       await setPublicMapCase(caseId, {
         status: 'new',
         ai: {
-          animalType: ai.animalType,
+          animalType: 'other',
         },
         triage: {
           urgency: 'medium',
@@ -175,13 +179,14 @@ export default function ReportPage() {
         caseId,
         actorUid: user.uid,
         action: 'submitted',
-        changes: { animalType: ai.animalType, confidence: ai.confidence },
+        changes: { animalType: 'other', confidence: 0 },
       });
 
       const created = await createAnimalWithFirstSighting({
         animalId,
         authorUid: user.uid,
-        type: ai.animalType,
+        authorEmail: user.email ?? '',
+        type: 'other',
         caption,
         photoUrl: photo.downloadUrl,
         photoPath: photo.storagePath,

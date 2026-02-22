@@ -43,6 +43,9 @@ export default function Navbar() {
     links.push({ href: '/feed', label: 'Feed' });
     links.push({ href: '/map', label: 'Map' });
   }
+  if (user) {
+    links.push({ href: '/profile', label: 'Profile' });
+  }
 
   if (admin) {
     links.push({ href: '/admin/dashboard', label: 'Admin' });

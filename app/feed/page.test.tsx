@@ -27,6 +27,8 @@ describe('Feed page', () => {
       {
         id: 's1',
         animalId: 'a1',
+        reporterUid: 'u-1',
+        reporterEmail: 'reporter@example.com',
         type: 'cat',
         caption: 'Near the school gate',
         photoUrl: 'https://example.com/cat.jpg',
@@ -42,6 +44,7 @@ describe('Feed page', () => {
       expect(screen.getByText(/near the school gate/i)).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /open animal profile/i })).toHaveAttribute('href', '/animal?id=a1');
       expect(screen.getByRole('link', { name: /view on map/i })).toHaveAttribute('href', '/map?animalId=a1');
+      expect(screen.getByRole('link', { name: /reporter@example.com/i })).toHaveAttribute('href', '/profile?uid=u-1');
     });
   });
 });
