@@ -16,7 +16,7 @@ import {
 } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { db, storage } from './firebase';
-import { AnimalDoc, AnimalMapMarker, AnimalProfile, AnimalSightingDoc, AnimalSightingItem, AnimalType, CaseDoc, CaseEvent, CaseFilters, FeedSighting, PublicMapCase } from './types';
+import { AnimalDoc, AnimalMapMarker, AnimalProfile, AnimalSightingDoc, AnimalSightingItem, AnimalType, CaseDoc, CaseEvent, CaseFilters, FeedSighting, PublicMapCase, RiskAnimalType, Urgency } from './types';
 
 export function getSessionId() {
   const key = 'straylink_session_id';
@@ -70,6 +70,23 @@ type NewAnimalPayloadInput = {
   authorUid: string;
 };
 
+type NewCasePayloadInput = {
+  animalId: string;
+  createdBy: string;
+  trackingToken: string;
+  photo: {
+    storagePath: string;
+    downloadUrl: string;
+  };
+  location: { lat: number; lng: number };
+  note: string;
+  ai: {
+    animalType: AnimalType;
+    confidence: number;
+    rawTopLabel: string;
+  };
+};
+
 type NewSightingPayloadInput = {
   animalId: string;
   type: AnimalType;
@@ -110,6 +127,65 @@ export function buildNewSightingPayload(input: NewSightingPayloadInput) {
     },
     commentCount: 0,
     createdAt: null,
+  };
+}
+
+export function buildAiRiskAdminOverride(
+  values?: Partial<{
+    overridden: boolean;
+    urgency: Urgency | null;
+    animalType: RiskAnimalType | null;
+    note: string | null;
+    overriddenBy: string | null;
+    overriddenAt: unknown | null;
+  }>
+) {
+  return {
+    overridden: values?.overridden ?? false,
+    urgency: values?.urgency ?? null,
+    animalType: values?.animalType ?? null,
+    note: values?.note ?? null,
+    overriddenBy: values?.overriddenBy ?? null,
+    overriddenAt: values?.overriddenAt ?? null,
+  };
+}
+
+export function buildNewCasePayload(input: NewCasePayloadInput): CaseDoc {
+  return {
+    animalId: input.animalId,
+    createdBy: input.createdBy,
+    trackingToken: input.trackingToken,
+    photo: {
+      storagePath: input.photo.storagePath,
+      downloadUrl: input.photo.downloadUrl,
+    },
+    location: {
+      lat: input.location.lat,
+      lng: input.location.lng,
+      addressText: '',
+      accuracy: 'exact',
+    },
+    report: {
+      count: '1',
+      behavior: 'unknown',
+      immediateDanger: false,
+      note: input.note,
+    },
+    ai: {
+      model: 'tfjs-mobilenet',
+      animalType: input.ai.animalType,
+      confidence: input.ai.confidence,
+      rawTopLabel: input.ai.rawTopLabel,
+    },
+    triage: {
+      urgency: 'medium',
+      reason: 'Pending human verification.',
+      needsHumanVerification: true,
+      source: 'ai',
+    },
+    status: 'new',
+    assignedTo: null,
+    resolution: null,
   };
 }
 
@@ -263,6 +339,14 @@ export async function listFeedSightings(): Promise<FeedSighting[]> {
       caption: String(data.latestSightingCaption ?? ''),
       photoUrl: String(data.coverPhotoUrl ?? ''),
       createdAtLabel,
+      aiRiskUrgency:
+        data.aiRisk && typeof (data.aiRisk as Record<string, unknown>).urgency === 'string'
+          ? ((data.aiRisk as Record<string, unknown>).urgency as FeedSighting['aiRiskUrgency'])
+          : undefined,
+      aiRiskReasonPreview:
+        data.aiRisk && typeof (data.aiRisk as Record<string, unknown>).reason === 'string'
+          ? String((data.aiRisk as Record<string, unknown>).reason).slice(0, 120)
+          : undefined,
     };
   });
 }
@@ -306,6 +390,9 @@ export async function getAnimalById(animalId: string): Promise<AnimalProfile | n
   const data = snap.data() as Record<string, unknown>;
   const rawLastSeen = data.lastSeenAt as { toDate?: () => Date } | undefined;
   const lastSeenAt = typeof rawLastSeen?.toDate === 'function' ? rawLastSeen.toDate() : null;
+  const rawAiRisk = data.aiRisk as Record<string, unknown> | undefined;
+  const rawAiRiskCreatedAt = rawAiRisk?.createdAt as { toDate?: () => Date } | undefined;
+  const aiRiskCreatedAt = typeof rawAiRiskCreatedAt?.toDate === 'function' ? rawAiRiskCreatedAt.toDate() : null;
 
   return {
     id: snap.id,
@@ -313,6 +400,22 @@ export async function getAnimalById(animalId: string): Promise<AnimalProfile | n
     coverPhotoUrl: String(data.coverPhotoUrl ?? ''),
     lastSeenAtLabel: lastSeenAt ? lastSeenAt.toLocaleString() : 'Unknown',
     sightingCount: Number(data.sightingCount ?? 0),
+    aiRisk: rawAiRisk
+      ? {
+          animalType: String(rawAiRisk.animalType ?? 'unknown') as any,
+          visibleIndicators: Array.isArray(rawAiRisk.visibleIndicators)
+            ? rawAiRisk.visibleIndicators.map((v) => String(v))
+            : [],
+          urgency: String(rawAiRisk.urgency ?? 'low') as any,
+          reason: String(rawAiRisk.reason ?? ''),
+          confidence: Number(rawAiRisk.confidence ?? 0),
+          disclaimer: String(rawAiRisk.disclaimer ?? ''),
+          needsHumanVerification: true,
+          error: rawAiRisk.error ? String(rawAiRisk.error) : null,
+          model: String(rawAiRisk.model ?? ''),
+          createdAtLabel: aiRiskCreatedAt ? aiRiskCreatedAt.toLocaleString() : 'Unknown',
+        }
+      : null,
   };
 }
 

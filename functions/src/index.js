@@ -1,0 +1,359 @@
+const { onDocumentWritten } = require('firebase-functions/v2/firestore');
+const { logger } = require('firebase-functions');
+const { defineSecret } = require('firebase-functions/params');
+const admin = require('firebase-admin');
+
+admin.initializeApp();
+
+const db = admin.firestore();
+const storage = admin.storage();
+const FieldValue = admin.firestore.FieldValue;
+const Timestamp = admin.firestore.Timestamp;
+
+const SYSTEM_PROMPT =
+  'You are an animal welfare triage assistant. You MUST NOT provide medical diagnosis. You only describe visible, observable cues in the image. You MUST output ONLY valid JSON that matches the schema. Do not include markdown, code fences, or extra text.';
+
+const USER_PROMPT =
+  'Analyze this image of an animal. Return a welfare risk screening (non-diagnostic).\n' +
+  'Forbidden: diagnosis, infection claims, disease names, treatment advice.\n' +
+  'Allowed: observable cues like visible wound/bleeding, thin body condition, discharge, patchy hair loss, limping posture, trapped in dangerous area, aggressive stance, lethargic posture, etc.\n' +
+  'Decide urgency:\n' +
+  '- high: visible bleeding/severe injury, trapped, unconscious, hit-by-vehicle scene, immediate danger\n' +
+  '- medium: possible limp, very thin, discharge, significant hair loss, unsafe area nearby\n' +
+  '- low: alert, standing, no visible injury, calm environment\n' +
+  'If uncertain, say so and lower confidence.\n' +
+  'Output JSON with exactly these keys:\n' +
+  '{\n' +
+  '  "animalType": "cat|dog|other|unknown",\n' +
+  '  "visibleIndicators": ["..."],\n' +
+  '  "urgency": "high|medium|low",\n' +
+  '  "reason": "...",\n' +
+  '  "confidence": 0.0,\n' +
+  '  "needsHumanVerification": true,\n' +
+  '  "disclaimer": "Not a medical diagnosis. For triage only. Requires human verification."\n' +
+  '}';
+
+const DISCLAIMER = 'Not a medical diagnosis. For triage only. Requires human verification.';
+const geminiApiKey = defineSecret('GEMINI_API_KEY');
+const allowedAnimalTypes = new Set(['cat', 'dog', 'other', 'unknown']);
+const allowedUrgencies = new Set(['high', 'medium', 'low']);
+
+function buildAdminOverride() {
+  return {
+    overridden: false,
+    urgency: null,
+    animalType: null,
+    note: null,
+    overriddenBy: null,
+    overriddenAt: null,
+  };
+}
+
+function parseGeminiRiskJson(rawText) {
+  let parsed;
+  try {
+    parsed = JSON.parse(rawText);
+  } catch {
+    throw new Error('Gemini output was not valid JSON.');
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('Gemini output must be a JSON object.');
+  }
+
+  const animalType = String(parsed.animalType || '').trim().toLowerCase();
+  if (!allowedAnimalTypes.has(animalType)) {
+    throw new Error('Invalid animalType in Gemini output.');
+  }
+
+  const urgency = String(parsed.urgency || '').trim().toLowerCase();
+  if (!allowedUrgencies.has(urgency)) {
+    throw new Error('Invalid urgency in Gemini output.');
+  }
+
+  const visibleIndicators = Array.isArray(parsed.visibleIndicators)
+    ? parsed.visibleIndicators.map((v) => String(v).trim()).filter(Boolean).slice(0, 10)
+    : null;
+  if (!visibleIndicators) {
+    throw new Error('Invalid visibleIndicators in Gemini output.');
+  }
+
+  const reason = String(parsed.reason || '').trim();
+  if (!reason) {
+    throw new Error('Missing reason in Gemini output.');
+  }
+
+  const confidence = Number(parsed.confidence);
+  if (!Number.isFinite(confidence)) {
+    throw new Error('Invalid confidence in Gemini output.');
+  }
+
+  return {
+    animalType,
+    visibleIndicators,
+    urgency,
+    reason,
+    confidence: Math.max(0, Math.min(1, confidence)),
+    needsHumanVerification: true,
+    disclaimer: String(parsed.disclaimer || DISCLAIMER).trim() || DISCLAIMER,
+  };
+}
+
+function guessMimeType(storagePath) {
+  const lower = String(storagePath || '').toLowerCase();
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  if (lower.endsWith('.gif')) return 'image/gif';
+  return 'image/jpeg';
+}
+
+async function callGemini({ imageBase64, mimeType, apiKey }) {
+  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  if (!apiKey) {
+    throw new Error('Missing GEMINI_API_KEY.');
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      system_instruction: {
+        parts: [{ text: SYSTEM_PROMPT }],
+      },
+      contents: [
+        {
+          parts: [
+            { text: USER_PROMPT },
+            {
+              inline_data: {
+                mime_type: mimeType,
+                data: imageBase64,
+              },
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.1,
+        responseMimeType: 'application/json',
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Gemini API failed (${response.status}): ${errText.slice(0, 300)}`);
+  }
+
+  const body = await response.json();
+  const text = body?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text || typeof text !== 'string') {
+    throw new Error('Gemini returned empty content.');
+  }
+
+  return {
+    model,
+    parsed: parseGeminiRiskJson(text),
+  };
+}
+
+exports.screenCaseAiRisk = onDocumentWritten(
+  {
+    document: 'cases/{caseId}',
+    region: 'us-central1',
+    maxInstances: 5,
+    concurrency: 10,
+    secrets: [geminiApiKey],
+  },
+  async (event) => {
+    const after = event.data?.after;
+    if (!after?.exists) return;
+
+    const caseId = event.params.caseId;
+    const caseData = after.data();
+    const animalId = caseData?.animalId;
+    const storagePath = caseData?.photo?.storagePath;
+    if (!storagePath) return;
+
+    const currentRisk = caseData?.aiRisk;
+    if (currentRisk?.createdAt || currentRisk?.error || currentRisk?.processing) return;
+
+    const caseRef = db.collection('cases').doc(caseId);
+    const lockAcquired = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(caseRef);
+      if (!snap.exists) return false;
+      const live = snap.data();
+      if (!live?.photo?.storagePath) return false;
+      const risk = live?.aiRisk;
+      if (risk?.createdAt || risk?.error || risk?.processing) return false;
+      tx.set(
+        caseRef,
+        {
+          aiRisk: {
+            processing: true,
+            error: null,
+            needsHumanVerification: true,
+            disclaimer: DISCLAIMER,
+            adminOverride: buildAdminOverride(),
+          },
+        },
+        { merge: true }
+      );
+      return true;
+    });
+
+    if (!lockAcquired) return;
+
+    const trackId = `${caseId}_${caseData.trackingToken}`;
+
+    try {
+      const file = storage.bucket().file(storagePath);
+      const [bytes] = await file.download();
+      const mimeType = guessMimeType(storagePath);
+      const { model, parsed } = await callGemini({
+        imageBase64: bytes.toString('base64'),
+        mimeType,
+        apiKey: geminiApiKey.value(),
+      });
+
+      const aiRiskDoc = {
+        model,
+        animalType: parsed.animalType,
+        visibleIndicators: parsed.visibleIndicators,
+        urgency: parsed.urgency,
+        reason: parsed.reason,
+        confidence: parsed.confidence,
+        disclaimer: parsed.disclaimer,
+        needsHumanVerification: true,
+        createdAt: FieldValue.serverTimestamp(),
+        error: null,
+        processing: FieldValue.delete(),
+        adminOverride: buildAdminOverride(),
+      };
+
+      await caseRef.set(
+        {
+          aiRisk: aiRiskDoc,
+          triage: {
+            urgency: parsed.urgency,
+            reason: parsed.reason,
+            needsHumanVerification: true,
+            source: 'aiRisk',
+          },
+        },
+        { merge: true }
+      );
+
+      if (animalId) {
+        await db.collection('animals').doc(animalId).set(
+          {
+            aiRisk: {
+              model,
+              animalType: parsed.animalType,
+              visibleIndicators: parsed.visibleIndicators,
+              urgency: parsed.urgency,
+              reason: parsed.reason,
+              confidence: parsed.confidence,
+              disclaimer: parsed.disclaimer,
+              needsHumanVerification: true,
+              error: null,
+              createdAt: FieldValue.serverTimestamp(),
+            },
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      }
+
+      await db.collection('public_tracks').doc(trackId).set(
+        {
+          aiRisk: {
+            ...aiRiskDoc,
+            createdAt: Timestamp.now(),
+          },
+          triage: {
+            urgency: parsed.urgency,
+          },
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      await db.collection('public_map_cases').doc(caseId).set(
+        {
+          triage: {
+            urgency: parsed.urgency,
+          },
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      await db.collection('case_events').add({
+        caseId,
+        timestamp: FieldValue.serverTimestamp(),
+        actorUid: 'system',
+        action: 'AI_RISK_SCREENED',
+        changes: {
+          urgency: parsed.urgency,
+          animalType: parsed.animalType,
+          confidence: parsed.confidence,
+        },
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown Gemini processing error.';
+      logger.error(`AI risk screening failed for case ${caseId}: ${message}`);
+      const failedAiRisk = {
+        model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+        animalType: 'unknown',
+        visibleIndicators: ['image unclear'],
+        urgency: 'low',
+        reason: 'Gemini risk screening failed; requires manual triage.',
+        confidence: 0,
+        disclaimer: DISCLAIMER,
+        needsHumanVerification: true,
+        createdAt: FieldValue.serverTimestamp(),
+        error: message.slice(0, 500),
+        processing: FieldValue.delete(),
+        adminOverride: buildAdminOverride(),
+      };
+      await caseRef.set(
+        {
+          aiRisk: failedAiRisk,
+        },
+        { merge: true }
+      );
+      await db.collection('public_tracks').doc(trackId).set(
+        {
+          aiRisk: {
+            ...failedAiRisk,
+            createdAt: Timestamp.now(),
+          },
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+      if (animalId) {
+        await db.collection('animals').doc(animalId).set(
+          {
+            aiRisk: {
+              model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+              animalType: 'unknown',
+              visibleIndicators: ['image unclear'],
+              urgency: 'low',
+              reason: 'Gemini risk screening failed; requires manual triage.',
+              confidence: 0,
+              disclaimer: DISCLAIMER,
+              needsHumanVerification: true,
+              error: message.slice(0, 500),
+              createdAt: FieldValue.serverTimestamp(),
+            },
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      }
+    }
+  }
+);

@@ -6,6 +6,7 @@ StrayLink is a free-tier web MVP for reporting stray animals/urban wildlife and 
 - Next.js 14 (App Router) + TypeScript + TailwindCSS
 - Firebase Web SDK (Auth, Firestore, Storage)
 - TensorFlow.js + MobileNet (in-browser)
+- Firebase Cloud Functions + Gemini (server-side welfare risk screening)
 - Leaflet + OpenStreetMap tiles
 
 ## Features
@@ -14,6 +15,7 @@ StrayLink is a free-tier web MVP for reporting stray animals/urban wildlife and 
 - Public report flow: photo upload, map click location, behavior + danger metadata
 - Public map (`/map`) showing all submitted case markers from limited public snapshot data
 - Client-side AI auto-tag to `cat|dog|other`
+- Server-side Gemini welfare risk screening (`aiRisk`) with strict non-diagnostic output
 - Firestore case lifecycle with event logs
 - Role-based admin access from the same `/auth` flow via `admins` collection gating
 - Admin dashboard, case detail actions, map view
@@ -53,6 +55,13 @@ firebase login
 firebase use --add
 firebase deploy --only firestore:rules,storage
 ```
+8. Install Functions dependencies and set Gemini secrets:
+```bash
+cd functions
+npm install
+firebase functions:secrets:set GEMINI_API_KEY
+cd ..
+```
 
 ## Admin Bootstrap
 1. Run app and sign in once via `/auth` (Google or email/password) to get your UID.
@@ -87,10 +96,26 @@ Static output is generated in `out/` (`next.config.js` sets `output: 'export'`).
 ```bash
 firebase deploy --only hosting
 ```
+To deploy Gemini risk screening trigger:
+```bash
+firebase deploy --only functions
+```
+
+## Gemini non-diagnostic welfare risk screening
+- TFJS MobileNet remains unchanged for fast in-browser animal auto-tagging (`cases/{caseId}.ai`).
+- A Firestore-triggered Cloud Function enriches new cases with `cases/{caseId}.aiRisk` using Gemini vision.
+- Gemini is used only server-side (no API key in browser).
+- Output is strictly non-diagnostic triage guidance:
+  - observable indicators only
+  - urgency suggestion (`high|medium|low`)
+  - always `needsHumanVerification=true`
+  - disclaimer: `Not a medical diagnosis. For triage only. Requires human verification.`
+- Admins can override `aiRisk` urgency/type; overrides are logged in `case_events` as `ADMIN_OVERRIDE_AI_RISK`.
 
 ## Notes on free-tier constraints
 - No Cloud Run required.
 - No paid Google Maps API usage; map tiles from OpenStreetMap.
-- All AI inference runs in browser with TensorFlow.js.
+- TFJS animal-type inference runs in browser; Gemini risk screening runs in Firebase Functions.
+- Gemini risk screening runs in Firebase Functions and does not diagnose disease/infections.
 - Public tracking is served from `public_tracks` docs keyed by `caseId + token` to avoid exposing full case listings.
 - Public map is served from `public_map_cases` docs with limited fields (`status`, `animalType`, `urgency`, `lat/lng`).

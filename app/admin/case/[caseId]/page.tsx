@@ -3,12 +3,13 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { serverTimestamp } from 'firebase/firestore';
 import AdminGuard from '@/components/AdminGuard';
 import StatusBadge from '@/components/StatusBadge';
 import { ErrorState, LoadingState } from '@/components/States';
 import { auth } from '@/lib/firebase';
-import { buildTrackId, getCaseById, logCaseEvent, updateCase, updatePublicMapCase, updatePublicTrackSnapshot } from '@/lib/data';
-import { AnimalType, ResolutionOutcome, Urgency } from '@/lib/types';
+import { buildAiRiskAdminOverride, buildTrackId, getCaseById, logCaseEvent, updateCase, updatePublicMapCase, updatePublicTrackSnapshot } from '@/lib/data';
+import { AnimalType, ResolutionOutcome, RiskAnimalType, Urgency } from '@/lib/types';
 
 export default function AdminCaseDetailPage() {
   const params = useParams<{ caseId: string }>();
@@ -24,6 +25,9 @@ export default function AdminCaseDetailPage() {
   const [assignedTo, setAssignedTo] = useState('');
   const [resolutionOutcome, setResolutionOutcome] = useState<ResolutionOutcome>('unknown');
   const [resolutionNotes, setResolutionNotes] = useState('');
+  const [overrideUrgency, setOverrideUrgency] = useState<Urgency>('medium');
+  const [overrideAnimalType, setOverrideAnimalType] = useState<RiskAnimalType | ''>('');
+  const [overrideNote, setOverrideNote] = useState('');
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -36,6 +40,9 @@ export default function AdminCaseDetailPage() {
       setAssignedTo((data.assignedTo as string | undefined) ?? '');
       setResolutionOutcome((data.resolution as any)?.outcome ?? 'unknown');
       setResolutionNotes((data.resolution as any)?.notes ?? '');
+      setOverrideUrgency((data.aiRisk as any)?.adminOverride?.urgency ?? (data.aiRisk as any)?.urgency ?? 'medium');
+      setOverrideAnimalType((data.aiRisk as any)?.adminOverride?.animalType ?? '');
+      setOverrideNote((data.aiRisk as any)?.adminOverride?.note ?? '');
     }
     setLoading(false);
   }, [caseId]);
@@ -112,7 +119,6 @@ export default function AdminCaseDetailPage() {
     if (!item) return;
     try {
       setSaving(true);
-      const { serverTimestamp } = await import('firebase/firestore');
       await updateCase(caseId, {
         status: 'resolved',
         resolution: {
@@ -169,6 +175,65 @@ export default function AdminCaseDetailPage() {
     }
   }
 
+  async function overrideAiRisk() {
+    if (!item) return;
+    const adminUid = auth.currentUser?.uid ?? null;
+    if (!adminUid) return toast.error('Admin session missing');
+
+    try {
+      setSaving(true);
+      const nextAnimalType = overrideAnimalType || null;
+      await updateCase(caseId, {
+        'aiRisk.adminOverride': buildAiRiskAdminOverride({
+          overridden: true,
+          urgency: overrideUrgency,
+          animalType: nextAnimalType,
+          note: overrideNote.trim() || null,
+          overriddenBy: adminUid,
+          overriddenAt: serverTimestamp(),
+        }),
+        'triage.urgency': overrideUrgency,
+        'triage.source': 'admin',
+      });
+
+      await logCaseEvent({
+        caseId,
+        actorUid: adminUid,
+        action: 'ADMIN_OVERRIDE_AI_RISK',
+        changes: {
+          urgency: overrideUrgency,
+          animalType: nextAnimalType,
+          note: overrideNote.trim() || null,
+        },
+      });
+
+      await updatePublicTrackSnapshot(buildTrackId(caseId, item.trackingToken), {
+        triage: { urgency: overrideUrgency },
+        aiRisk: {
+          ...(item.aiRisk ?? {}),
+          adminOverride: {
+            overridden: true,
+            urgency: overrideUrgency,
+            animalType: nextAnimalType,
+            note: overrideNote.trim() || null,
+            overriddenBy: adminUid,
+          },
+        },
+      });
+
+      await updatePublicMapCase(caseId, {
+        triage: { urgency: overrideUrgency },
+      });
+
+      toast.success('AI risk override saved');
+      await refresh();
+    } catch {
+      toast.error('Override failed');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <AdminGuard>
       {loading ? <LoadingState text="Loading case..." /> : null}
@@ -184,6 +249,44 @@ export default function AdminCaseDetailPage() {
             <p className="text-sm text-slate-600">AI: {item.ai?.animalType ?? 'other'} ({item.ai?.confidence ?? 0})</p>
             <p className="text-sm text-slate-600">Location: {(item.location?.lat ?? 0).toFixed(5)}, {(item.location?.lng ?? 0).toFixed(5)}</p>
             <p className="text-sm text-slate-600">Immediate danger: {item.report?.immediateDanger ? 'Yes' : 'No'}</p>
+          </div>
+
+          <div className="card space-y-3 p-4">
+            <h2 className="text-lg font-semibold">AI welfare risk screening (not diagnosis)</h2>
+            {!item.aiRisk ? <p className="text-sm text-slate-600">Screening in progress...</p> : null}
+            {item.aiRisk ? (
+              <>
+                <p className="text-sm text-slate-700">Suggested urgency: {item.aiRisk.urgency}</p>
+                <p className="text-sm text-slate-700">Animal type: {item.aiRisk.animalType}</p>
+                <p className="text-sm text-slate-700">Indicators: {(item.aiRisk.visibleIndicators ?? []).join(', ') || 'none'}</p>
+                <p className="text-sm text-slate-600">{item.aiRisk.disclaimer}</p>
+              </>
+            ) : null}
+          </div>
+
+          <div className="card grid gap-3 p-4 md:grid-cols-2">
+            <h2 className="md:col-span-2 text-lg font-semibold">Admin override AI risk</h2>
+            <select className="input" value={overrideUrgency} onChange={(e) => setOverrideUrgency(e.target.value as Urgency)}>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+            <select className="input" value={overrideAnimalType} onChange={(e) => setOverrideAnimalType((e.target.value as RiskAnimalType) || '')}>
+              <option value="">No override</option>
+              <option value="cat">Cat</option>
+              <option value="dog">Dog</option>
+              <option value="other">Other</option>
+              <option value="unknown">Unknown</option>
+            </select>
+            <input
+              className="input md:col-span-2"
+              placeholder="Override note (optional)"
+              value={overrideNote}
+              onChange={(e) => setOverrideNote(e.target.value)}
+            />
+            <button className="btn-primary md:col-span-2" disabled={saving} type="button" onClick={overrideAiRisk}>
+              Save AI risk override
+            </button>
           </div>
 
           <form onSubmit={verifyCase} className="card grid gap-3 p-4 md:grid-cols-2">

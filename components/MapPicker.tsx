@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import 'leaflet/dist/leaflet.css';
 import '@/styles/leaflet.css';
@@ -20,11 +20,11 @@ function LocationClickHandler({ onPick }: { onPick: (point: { lat: number; lng: 
 }
 
 export default function MapPicker({ value, onChange }: Props) {
-  const center = useMemo(() => value ?? { lat: 40.7128, lng: -74.006 }, [value]);
+  const center = useMemo(() => value ?? { lat: 3.1390, lng: 101.6869 }, [value]);
 
   return (
     <div className="h-72 overflow-hidden rounded-xl border border-slate-200">
-      <MapContainer center={center} zoom={value ? 14 : 4} scrollWheelZoom className="h-full w-full">
+      <MapContainer center={center} zoom={value ? 14 : 6} scrollWheelZoom className="h-full w-full">
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

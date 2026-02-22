@@ -57,6 +57,12 @@ export default function FeedPage() {
                 ) : null}
                 <div className="space-y-2 p-4 text-sm">
                   <p className="font-semibold capitalize">{item.type}</p>
+                  {item.aiRiskUrgency ? (
+                    <p className="text-xs text-slate-700">
+                      AI risk: <span className="font-semibold capitalize">{item.aiRiskUrgency}</span>
+                    </p>
+                  ) : null}
+                  {item.aiRiskReasonPreview ? <p className="text-xs text-slate-600">{item.aiRiskReasonPreview}...</p> : null}
                   <p>{item.caption || 'No caption provided.'}</p>
                   <p className="text-xs text-slate-500">{item.createdAtLabel}</p>
                   <div className="flex gap-4 text-sm">

@@ -1,12 +1,25 @@
-﻿export type CaseStatus = 'new' | 'verified' | 'assigned' | 'resolved' | 'rejected';
+export type CaseStatus = 'new' | 'verified' | 'assigned' | 'resolved' | 'rejected';
 export type AnimalType = 'cat' | 'dog' | 'other';
+export type RiskAnimalType = AnimalType | 'unknown';
 export type Urgency = 'low' | 'medium' | 'high';
 export type CountEstimate = '1' | '2-3' | 'many';
 export type BehaviorType = 'calm' | 'aggressive' | 'unknown';
 export type ResolutionOutcome = 'rescued' | 'treated' | 'relocated' | 'false_report' | 'unknown';
 
+export interface AiRiskSummary {
+  animalType: RiskAnimalType;
+  visibleIndicators: string[];
+  urgency: Urgency;
+  reason: string;
+  confidence: number;
+  disclaimer: string;
+  needsHumanVerification: true;
+  error: string | null;
+}
+
 export interface CaseDoc {
   createdAt?: unknown;
+  animalId?: string;
   createdBy: string;
   trackingToken: string;
   photo: {
@@ -35,7 +48,20 @@ export interface CaseDoc {
     urgency: Urgency;
     reason: string;
     needsHumanVerification: true;
+    source?: 'ai' | 'aiRisk' | 'admin';
   };
+  aiRisk?: (AiRiskSummary & {
+    model: string;
+    createdAt?: unknown;
+    adminOverride: {
+      overridden: boolean;
+      urgency: Urgency | null;
+      animalType: RiskAnimalType | null;
+      note: string | null;
+      overriddenBy: string | null;
+      overriddenAt: unknown | null;
+    };
+  });
   status: CaseStatus;
   assignedTo: string | null;
   resolution: {
@@ -88,6 +114,10 @@ export interface AnimalDoc {
   sightingCount: number;
   latestSightingCaption: string;
   latestSightingPhotoPath: string;
+  aiRisk?: AiRiskSummary & {
+    model: string;
+    createdAt?: unknown;
+  };
 }
 
 export interface AnimalSightingDoc {
@@ -118,6 +148,8 @@ export interface FeedSighting {
   caption: string;
   photoUrl: string;
   createdAtLabel: string;
+  aiRiskUrgency?: Urgency;
+  aiRiskReasonPreview?: string;
 }
 
 export interface AnimalMapMarker {
@@ -136,6 +168,10 @@ export interface AnimalProfile {
   coverPhotoUrl: string;
   lastSeenAtLabel: string;
   sightingCount: number;
+  aiRisk?: (AiRiskSummary & {
+    model: string;
+    createdAtLabel: string;
+  }) | null;
 }
 
 export interface AnimalSightingItem {

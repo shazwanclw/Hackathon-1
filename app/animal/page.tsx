@@ -77,6 +77,19 @@ export default function AnimalProfilePage() {
               <p className="capitalize">Type: {animal.type}</p>
               <p>Last seen: {animal.lastSeenAtLabel}</p>
               <p>Total sightings: {animal.sightingCount}</p>
+              {animal.aiRisk ? (
+                <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+                  <p className="font-semibold">AI welfare risk screening (not diagnosis)</p>
+                  <p className="capitalize">Urgency: {animal.aiRisk.urgency}</p>
+                  <p>Reason: {animal.aiRisk.reason}</p>
+                  <p>Visible indicators: {animal.aiRisk.visibleIndicators.join(', ') || 'none'}</p>
+                  <p>Confidence: {animal.aiRisk.confidence}</p>
+                  <p className="text-xs text-slate-600">{animal.aiRisk.disclaimer}</p>
+                  <p className="text-xs text-slate-500">Generated: {animal.aiRisk.createdAtLabel}</p>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500">AI welfare screening not available yet.</p>
+              )}
             </div>
           </article>
 

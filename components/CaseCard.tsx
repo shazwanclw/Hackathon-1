@@ -2,7 +2,9 @@
 import StatusBadge from './StatusBadge';
 
 export default function CaseCard({ caseItem, admin = true }: { caseItem: any; admin?: boolean }) {
-  const href = admin ? `/admin/case/${caseItem.id}` : `/track/${caseItem.id}`;
+  const href = admin
+    ? `/admin/case/${caseItem.id}`
+    : `/track?caseId=${caseItem.id}${caseItem.trackingToken ? `&t=${caseItem.trackingToken}` : ''}`;
   return (
     <Link href={href} className="card block p-4 hover:border-brand-500">
       <div className="mb-2 flex items-start justify-between gap-3">
