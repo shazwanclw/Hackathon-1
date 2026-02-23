@@ -12,12 +12,16 @@ StrayLink is a free-tier web MVP for reporting stray animals/urban wildlife and 
 - Public homepage (`/`) with mission/goals and a single `Login / Join` CTA
 - Unified auth (`/auth`): email/password login, registration, Google sign-in, or join as guest
 - Public report flow: photo upload, auto-detect location (default) or manual map pin, optional caption
+- Manual report map picker uses explicit Leaflet marker icons (prevents broken marker image in manual mode)
 - Public map (`/map`) showing all submitted case markers from limited public snapshot data
+- Public feed (`/feed`) showing all submitted reports, including reporter email and clickable reporter profile link
+- User profile (`/profile` or `/profile?uid=<uid>`) showing reporter identity and all reports submitted by that user
 - Gemini classifies animal type (`cat|dog|other`) and runs non-diagnostic welfare risk screening (`aiRisk`) server-side
 - Firestore case lifecycle with event logs
 - Role-based admin access from the same `/auth` flow via `admins` collection gating
 - Admin dashboard, case detail actions, map view
 - Public tracking via query route: `/track?caseId=<id>&t=<token>`
+- Cohesive brown/honey visual theme with shared UI primitives and responsive layouts
 
 ## Project Structure
 - `app/` routes (public + admin)
@@ -26,6 +30,22 @@ StrayLink is a free-tier web MVP for reporting stray animals/urban wildlife and 
 - `styles/` global + leaflet CSS
 - `firestore.rules`, `storage.rules`, `firebase.json`
 - `prd.md`, `checklist.md`
+
+## UI Theme and Style Guide
+- Core palette is defined in `tailwind.config.js`:
+  - `brand.*` for brown tones
+  - `honey.*` for yellow accents
+- Global UI primitives are defined in `styles/globals.css`:
+  - Layout/text: `container-shell`, `page-title`, `page-subtitle`, `text-muted`
+  - Surfaces: `card`, `card-elevated`
+  - Controls: `btn-primary`, `btn-secondary`, `btn-ghost`, `segment`, `segment-active`, `input`, `label`
+- Typography:
+  - Display: `Cormorant Garamond`
+  - Body: `Manrope`
+- When adding new pages/components:
+  - Prefer shared primitives before creating one-off classes
+  - Reuse tokenized colors (`brand.*`, `honey.*`) instead of new hardcoded colors
+  - Keep admin UI cleaner/simpler but palette-consistent with public pages
 
 ## Setup
 1. Install dependencies:
@@ -83,6 +103,8 @@ npm run test
 npm run lint
 npm run typecheck
 ```
+
+For visual consistency after UI changes, always run all three checks before commit.
 
 ## Build and static export
 ```bash

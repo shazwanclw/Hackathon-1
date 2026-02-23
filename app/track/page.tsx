@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import PublicAccessGuard from '@/components/PublicAccessGuard';
 import StatusBadge from '@/components/StatusBadge';
 import { ErrorState, LoadingState } from '@/components/States';
 import { getPublicTrack } from '@/lib/data';
 
-export default function TrackPage() {
+export const dynamic = 'force-dynamic';
+
+function TrackPageContent() {
   const search = useSearchParams();
   const token = search.get('t');
   const caseId = search.get('caseId');
@@ -86,5 +89,19 @@ export default function TrackPage() {
         </section>
       ) : null}
     </PublicAccessGuard>
+  );
+}
+
+export default function TrackPage() {
+  return (
+    <Suspense
+      fallback={
+        <PublicAccessGuard>
+          <LoadingState text="Loading case status..." />
+        </PublicAccessGuard>
+      }
+    >
+      <TrackPageContent />
+    </Suspense>
   );
 }

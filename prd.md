@@ -19,9 +19,11 @@ StrayLink contributes to safer, healthier neighborhoods by:
 ### Public Reporter (guest or optional account login)
 - Continue as guest without account/session.
 - Optionally register/login via email and password at `/auth`.
-- Submit a case with photo, location, and incident details.
+- Signed-in users can submit a case with photo, location, and incident details from `/report`.
 - Receive case ID and tracking token.
 - Track limited status via `/track?caseId=<caseId>&t=<token>`.
+- View community feed at `/feed` with reporter identity and links to each reporter profile.
+- View user profile at `/profile` (self) or `/profile?uid=<uid>` (public view) to see all reports by that user.
 
 ### Admin / NGO Operator (login required)
 - Authenticate via Firebase Auth at `/auth` (Google sign-in or email/password).
@@ -31,6 +33,8 @@ StrayLink contributes to safer, healthier neighborhoods by:
 ## 5) Goals and Non-Goals
 ### Goals (MVP)
 - Public report flow with image upload (<=3MB), location mode (auto-detect default + manual map fallback), and metadata.
+- Feed includes reporter email and profile link per report card.
+- Profile view lists reports submitted by a given user.
 - Server-side Gemini classification mapped to `cat|dog|other`.
 - Server-side Gemini non-diagnostic welfare risk screening.
 - Firestore case lifecycle: `new -> verified -> assigned -> resolved|rejected`.
@@ -49,7 +53,10 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - Landing page `/` explains value and calls to action.
 - Public auth page `/auth` provides login, register, and guest-entry actions.
 - Report page `/report` supports photo upload, auto location (default) or manual map pin, and note.
+- Manual map marker uses explicit Leaflet icon URLs to avoid broken default marker assets in Next.js.
 - Public map page `/map` shows all submitted case markers using limited public snapshot fields.
+- Feed page `/feed` shows all reports (not user-scoped), including reporter email + profile link.
+- Profile page `/profile` shows user identity and user-scoped report history.
 - Submission flow:
   1. Validate fields.
   2. Generate `caseId`.
@@ -72,7 +79,7 @@ StrayLink contributes to safer, healthier neighborhoods by:
 ### Firestore: `cases/{caseId}`
 - `createdAt`: serverTimestamp
 - `animalId`: string
-- `createdBy`: anonymous session id string
+- `createdBy`: authenticated reporter UID string
 - `trackingToken`: string
 - `photo`: `{ storagePath, downloadUrl }`
 - `location`: `{ lat, lng, addressText, accuracy: "exact"|"approx" }`
@@ -110,6 +117,16 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - `enabled`: boolean
 - `createdAt`: timestamp
 
+### Firestore: `animals/{animalId}` (public thread source for feed/profile)
+- `createdBy`: reporter UID
+- `createdByEmail`: reporter email (used by feed/profile)
+- `type`, `coverPhotoUrl`, `lastSeenLocation`, `lastSeenAt`, `sightingCount`, `latestSightingCaption`, `latestSightingPhotoPath`
+
+### Firestore: `animals/{animalId}/sightings/{sightingId}`
+- `authorUid`: reporter UID
+- `authorEmail`: reporter email
+- `type`, `caption`, `photoUrl`, `photoPath`, `location`, `commentCount`, `createdAt`
+
 ## 8) Security and Privacy
 - **Chosen approach: Option A-equivalent tokenized tracking snapshot.**
 - Public cannot read/list `cases`.
@@ -139,6 +156,22 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - Loading/error/empty states.
 - Toasts for success and error feedback.
 
+### Visual Design System (Current Baseline)
+- Theme direction: warm brown + honey yellow palette with soft paper-like surfaces.
+- Typography:
+  - Display/headings: `Cormorant Garamond`.
+  - Body/UI text: `Manrope`.
+- Styling guardrails:
+  - Use shared classes from `styles/globals.css` (`card`, `card-elevated`, `btn-primary`, `btn-secondary`, `btn-ghost`, `segment`, `segment-active`, `input`, `label`).
+  - Prefer design tokens from `tailwind.config.js` (`brand.*`, `honey.*`) over ad-hoc hex colors.
+  - Keep admin screens visually aligned but lower-ornament than public screens (function-first).
+- Motion and interaction:
+  - Subtle hover/focus transitions only; no distracting continuous animations.
+  - Strong focus rings on all interactive controls for accessibility.
+- Accessibility baseline:
+  - Maintain WCAG-friendly contrast for text and controls.
+  - Preserve semantic headings/labels and keyboard accessibility.
+
 ## 12) Key Metrics (MVP)
 - Report submission success rate.
 - Median report-to-verify time.
@@ -165,3 +198,8 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - Notification channels (email/SMS/WhatsApp integration).
 - Multi-org tenancy.
 - Better geospatial aggregation and heatmaps.
+- Design quality upgrades:
+  - Introduce skeleton loaders for feed/map/profile to improve perceived performance.
+  - Add a compact/dense mode for admin workflows handling large case volumes.
+  - Add empty-state illustrations/icons per route for stronger visual hierarchy.
+  - Add visual regression snapshots (Playwright) to prevent accidental style drift.

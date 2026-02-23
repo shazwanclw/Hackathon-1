@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { Suspense } from 'react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import PublicAccessGuard from '@/components/PublicAccessGuard';
@@ -8,7 +9,9 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/States';
 import { getAnimalById, listAnimalSightings } from '@/lib/data';
 import { AnimalProfile, AnimalSightingItem } from '@/lib/types';
 
-export default function AnimalProfilePage() {
+export const dynamic = 'force-dynamic';
+
+function AnimalProfilePageContent() {
   const search = useSearchParams();
   const animalId = search.get('id') || '';
 
@@ -113,5 +116,19 @@ export default function AnimalProfilePage() {
         </section>
       ) : null}
     </PublicAccessGuard>
+  );
+}
+
+export default function AnimalProfilePage() {
+  return (
+    <Suspense
+      fallback={
+        <PublicAccessGuard>
+          <LoadingState text="Loading animal profile..." />
+        </PublicAccessGuard>
+      }
+    >
+      <AnimalProfilePageContent />
+    </Suspense>
   );
 }

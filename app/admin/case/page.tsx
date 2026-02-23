@@ -1,7 +1,8 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import toast from 'react-hot-toast';
 import { serverTimestamp } from 'firebase/firestore';
 import AdminGuard from '@/components/AdminGuard';
@@ -11,9 +12,11 @@ import { auth } from '@/lib/firebase';
 import { buildAiRiskAdminOverride, buildTrackId, getCaseById, logCaseEvent, updateCase, updatePublicMapCase, updatePublicTrackSnapshot } from '@/lib/data';
 import { AnimalType, ResolutionOutcome, RiskAnimalType, Urgency } from '@/lib/types';
 
-export default function AdminCaseDetailPage() {
-  const params = useParams<{ caseId: string }>();
-  const caseId = params.caseId;
+export const dynamic = 'force-dynamic';
+
+function AdminCaseDetailPageContent() {
+  const searchParams = useSearchParams();
+  const caseId = searchParams.get('caseId') ?? '';
 
   const [item, setItem] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
@@ -30,6 +33,11 @@ export default function AdminCaseDetailPage() {
   const [overrideNote, setOverrideNote] = useState('');
 
   const refresh = useCallback(async () => {
+    if (!caseId) {
+      setItem(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const data = await getCaseById(caseId);
     setItem(data);
@@ -247,7 +255,10 @@ export default function AdminCaseDetailPage() {
               <StatusBadge status={item.status} />
             </div>
             <p className="text-sm text-muted">AI: {item.ai?.animalType ?? 'other'} ({item.ai?.confidence ?? 0})</p>
-            <p className="text-sm text-muted">Location: {(item.location?.lat ?? 0).toFixed(5)}, {(item.location?.lng ?? 0).toFixed(5)}</p>
+            <p className="text-sm text-muted">
+              Location: {Number.isFinite(Number(item.location?.lat)) ? Number(item.location?.lat).toFixed(5) : '0.00000'},{' '}
+              {Number.isFinite(Number(item.location?.lng)) ? Number(item.location?.lng).toFixed(5) : '0.00000'}
+            </p>
             <p className="text-sm text-muted">Immediate danger: {item.report?.immediateDanger ? 'Yes' : 'No'}</p>
           </div>
 
@@ -327,5 +338,19 @@ export default function AdminCaseDetailPage() {
         </section>
       ) : null}
     </AdminGuard>
+  );
+}
+
+export default function AdminCaseDetailPage() {
+  return (
+    <Suspense
+      fallback={
+        <AdminGuard>
+          <LoadingState text="Loading case..." />
+        </AdminGuard>
+      }
+    >
+      <AdminCaseDetailPageContent />
+    </Suspense>
   );
 }

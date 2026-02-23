@@ -1,9 +1,12 @@
-﻿/** @type {import('next').NextConfig} */
+/** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
   images: {
     unoptimized: true,
   },
 };
+
+if (process.env.NEXT_OUTPUT_EXPORT === '1') {
+  nextConfig.output = 'export';
+}
 
 module.exports = nextConfig;

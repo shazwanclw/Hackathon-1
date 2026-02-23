@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -10,7 +11,9 @@ import { observeAuth } from '@/lib/auth';
 import { getUserProfileSummary, listUserFeedSightings } from '@/lib/data';
 import { FeedSighting, UserProfileSummary } from '@/lib/types';
 
-export default function ProfilePage() {
+export const dynamic = 'force-dynamic';
+
+function ProfilePageContent() {
   const search = useSearchParams();
   const queryUid = useMemo(() => (search.get('uid') || '').trim(), [search]);
   const [authUid, setAuthUid] = useState('');
@@ -106,5 +109,19 @@ export default function ProfilePage() {
         ) : null}
       </section>
     </PublicAccessGuard>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense
+      fallback={
+        <PublicAccessGuard>
+          <LoadingState text="Loading profile..." />
+        </PublicAccessGuard>
+      }
+    >
+      <ProfilePageContent />
+    </Suspense>
   );
 }
