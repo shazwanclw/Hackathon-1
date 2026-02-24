@@ -106,11 +106,26 @@ npm run typecheck
 
 For visual consistency after UI changes, always run all three checks before commit.
 
-## Build and static export
+## Build
 ```bash
 npm run build
 ```
-Static output is generated in `out/` (`next.config.js` sets `output: 'export'`).
+
+## Optional static export
+Static export is opt-in. Set `NEXT_OUTPUT_EXPORT=1` before build.
+
+PowerShell:
+```powershell
+$env:NEXT_OUTPUT_EXPORT="1"
+npm run build
+```
+
+Bash:
+```bash
+NEXT_OUTPUT_EXPORT=1 npm run build
+```
+
+When enabled, static output is generated in `out/`.
 
 ## Firebase Hosting deploy
 ```bash

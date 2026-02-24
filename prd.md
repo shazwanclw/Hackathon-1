@@ -71,7 +71,7 @@ StrayLink contributes to safer, healthier neighborhoods by:
 ### Admin
 - Unified login page `/auth` handles admin and public sign-in.
 - Dashboard `/admin/dashboard` lists/filter cases.
-- Case detail `/admin/case/[caseId]` supports verify/assign/resolve/reject with event log.
+- Case detail `/admin/case?caseId=<caseId>` supports verify/assign/resolve/reject with event log.
 - Admin actions also sync `public_tracks` status snapshot.
 - Map page `/admin/map` shows exact markers and filters.
 
@@ -143,7 +143,7 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - Data/Auth/Storage: Firebase Web SDK v9 modular.
 - AI: Gemini via Firebase Cloud Functions for both classification and non-diagnostic welfare risk screening.
 - Maps: Leaflet + OpenStreetMap tiles.
-- Deployment: Local development works with Next.js dev server. Static export constraints remain for admin dynamic routes (`/admin/case/[caseId]`), while public tracking now uses static-safe query route (`/track?caseId=...&t=...`).
+- Deployment: Local development works with Next.js dev server. Query-based routes are used for tracking and admin case details (`/track?caseId=...&t=...`, `/admin/case?caseId=...`) to remain static-export friendly when export mode is enabled.
 
 ## 10) Tech Constraints
 - Node 18+
