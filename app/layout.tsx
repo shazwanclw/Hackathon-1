@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Cormorant_Garamond, Manrope } from 'next/font/google';
+import { Cormorant_Garamond, Lobster, Manrope } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';
 import Navbar from '@/components/Navbar';
 import '@/styles/globals.css';
@@ -20,10 +20,16 @@ const displayFont = Cormorant_Garamond({
   weight: ['600', '700'],
 });
 
+const logoFont = Lobster({
+  subsets: ['latin'],
+  variable: '--font-logo',
+  weight: ['400'],
+});
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${bodyFont.variable} ${displayFont.variable} font-[var(--font-body)]`}>
+      <body className={`${bodyFont.variable} ${displayFont.variable} ${logoFont.variable} font-[var(--font-body)]`}>
         <div className="app-shell">
           <Navbar />
           <main className="container-shell py-7">{children}</main>

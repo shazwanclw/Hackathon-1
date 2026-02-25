@@ -1,6 +1,7 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   GeoPoint,
   getDoc,
@@ -16,7 +17,7 @@ import {
 } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { db, storage } from './firebase';
-import { AnimalDoc, AnimalMapMarker, AnimalProfile, AnimalSightingDoc, AnimalSightingItem, AnimalType, CaseDoc, CaseEvent, CaseFilters, FeedSighting, PublicMapCase, RiskAnimalType, Urgency, UserProfileSummary } from './types';
+import { AnimalDoc, AnimalMapMarker, AnimalProfile, AnimalSightingDoc, AnimalSightingItem, AnimalType, CaseDoc, CaseEvent, CaseFilters, FeedComment, FeedSighting, PublicMapCase, RiskAnimalType, Urgency, UserProfileDoc, UserProfileSummary } from './types';
 
 export function getSessionId() {
   const key = 'straylink_session_id';
@@ -66,6 +67,7 @@ type NewAnimalPayloadInput = {
   caption: string;
   photoUrl: string;
   photoPath: string;
+  photoUrls?: string[];
   location: { lat: number; lng: number };
   authorUid: string;
   authorEmail: string;
@@ -94,12 +96,15 @@ type NewSightingPayloadInput = {
   caption: string;
   photoUrl: string;
   photoPath: string;
+  photoUrls?: string[];
+  photoPaths?: string[];
   location: { lat: number; lng: number };
   authorUid: string;
   authorEmail: string;
 };
 
 export function buildNewAnimalPayload(input: NewAnimalPayloadInput) {
+  const photoUrls = input.photoUrls && input.photoUrls.length > 0 ? input.photoUrls.slice(0, 3) : [input.photoUrl];
   return {
     createdBy: input.authorUid,
     createdByEmail: input.authorEmail,
@@ -113,10 +118,13 @@ export function buildNewAnimalPayload(input: NewAnimalPayloadInput) {
     sightingCount: 1,
     latestSightingCaption: input.caption,
     latestSightingPhotoPath: input.photoPath,
+    latestSightingPhotoUrls: photoUrls,
   };
 }
 
 export function buildNewSightingPayload(input: NewSightingPayloadInput) {
+  const photoUrls = input.photoUrls && input.photoUrls.length > 0 ? input.photoUrls.slice(0, 3) : [input.photoUrl];
+  const photoPaths = input.photoPaths && input.photoPaths.length > 0 ? input.photoPaths.slice(0, 3) : [input.photoPath];
   return {
     animalId: input.animalId,
     authorUid: input.authorUid,
@@ -125,6 +133,8 @@ export function buildNewSightingPayload(input: NewSightingPayloadInput) {
     caption: input.caption,
     photoUrl: input.photoUrl,
     photoPath: input.photoPath,
+    photoUrls,
+    photoPaths,
     location: {
       lat: input.location.lat,
       lng: input.location.lng,
@@ -202,6 +212,7 @@ export async function createAnimalWithFirstSighting(input: NewSightingPayloadInp
     caption: input.caption,
     photoUrl: input.photoUrl,
     photoPath: input.photoPath,
+    photoUrls: input.photoUrls,
     location: input.location,
     authorUid: input.authorUid,
     authorEmail: input.authorEmail,
@@ -328,14 +339,16 @@ export async function updateCase(caseId: string, changes: Record<string, unknown
   await updateDoc(doc(db, 'cases', caseId), changes);
 }
 
-export async function listFeedSightings(): Promise<FeedSighting[]> {
+export async function listFeedSightings(viewerUid = ''): Promise<FeedSighting[]> {
   const snaps = await getDocs(query(collection(db, 'animals'), orderBy('createdAt', 'desc'), limit(100)));
-  return snaps.docs.map((snap) => mapAnimalDocToFeedSighting(snap.id, snap.data() as Record<string, unknown>));
+  const baseRows = snaps.docs.map((snap) => mapAnimalDocToFeedSighting(snap.id, snap.data() as Record<string, unknown>));
+  const withProfiles = await attachReporterProfiles(baseRows);
+  return attachSocialMetadata(withProfiles, viewerUid);
 }
 
 export async function listUserFeedSightings(uid: string): Promise<FeedSighting[]> {
   const snaps = await getDocs(query(collection(db, 'animals'), where('createdBy', '==', uid), limit(200)));
-  const rows = snaps.docs.map((snap) => {
+  const baseRows: Array<FeedSighting & { createdAtTs: number }> = snaps.docs.map((snap) => {
     const data = snap.data() as Record<string, unknown>;
     const mapped = mapAnimalDocToFeedSighting(snap.id, data);
     return {
@@ -344,18 +357,49 @@ export async function listUserFeedSightings(uid: string): Promise<FeedSighting[]
     };
   });
 
-  rows.sort((a, b) => b.createdAtTs - a.createdAtTs);
+  const rows = await attachReporterProfiles(baseRows);
+  rows.sort((a, b) => (b.createdAtTs ?? 0) - (a.createdAtTs ?? 0));
   return rows.map(({ createdAtTs: _createdAtTs, ...row }) => row);
+}
+
+export async function toggleLikeInAnimalFeed(animalId: string, uid: string, currentlyLiked: boolean) {
+  if (!animalId || !uid) return;
+  const likeRef = doc(db, 'animals', animalId, 'likes', uid);
+  if (currentlyLiked) {
+    await deleteDoc(likeRef);
+    return;
+  }
+  await setDoc(likeRef, {
+    uid,
+    createdAt: serverTimestamp(),
+  });
+}
+
+export async function addCommentToAnimalFeed(animalId: string, authorUid: string, authorEmail: string, content: string) {
+  if (!animalId || !authorUid || !content.trim()) return;
+  await addDoc(collection(db, 'animals', animalId, 'comments'), {
+    authorUid,
+    authorEmail,
+    content: content.trim(),
+    createdAt: serverTimestamp(),
+  });
 }
 
 export async function getUserProfileSummary(uid: string): Promise<UserProfileSummary> {
   const snaps = await getDocs(query(collection(db, 'animals'), where('createdBy', '==', uid), limit(200)));
   const docs = snaps.docs.map((snap) => snap.data() as Record<string, unknown>);
   const firstWithEmail = docs.find((item) => typeof item.createdByEmail === 'string' && item.createdByEmail);
+  const fallbackEmail = firstWithEmail ? String(firstWithEmail.createdByEmail) : 'Unknown reporter';
+  const profile = await getUserProfile(uid, fallbackEmail);
+  const [followersCount, followingCount] = await Promise.all([getFollowerCount(uid), getFollowingCount(uid)]);
 
   return {
     uid,
-    email: firstWithEmail ? String(firstWithEmail.createdByEmail) : 'Unknown reporter',
+    email: profile.email || fallbackEmail,
+    username: profile.username || deriveUsername(profile.email || fallbackEmail),
+    photoURL: profile.photoURL || '',
+    followersCount,
+    followingCount,
     reportCount: snaps.size,
   };
 }
@@ -465,9 +509,104 @@ export async function listAnimalSightings(animalId: string): Promise<AnimalSight
   });
 }
 
+export async function getUserProfile(uid: string, fallbackEmail = ''): Promise<UserProfileDoc> {
+  const snap = await getDoc(doc(db, 'users', uid));
+  const fallbackUsername = deriveUsername(fallbackEmail || uid);
+  if (!snap.exists()) {
+    return {
+      email: fallbackEmail || '',
+      username: fallbackUsername,
+      photoURL: '',
+    };
+  }
+
+  const data = snap.data() as Record<string, unknown>;
+  return {
+    email: String(data.email ?? fallbackEmail ?? ''),
+    username: String(data.username ?? fallbackUsername),
+    photoURL: String(data.photoURL ?? ''),
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt,
+  };
+}
+
+export async function upsertUserProfile(uid: string, email: string) {
+  const existing = await getDoc(doc(db, 'users', uid));
+  if (existing.exists()) return;
+  const username = deriveUsername(email || uid);
+  await setDoc(doc(db, 'users', uid), {
+    email: email || '',
+    username,
+    photoURL: '',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function saveUserProfile(uid: string, changes: Partial<Pick<UserProfileDoc, 'username' | 'photoURL' | 'email'>>) {
+  const current = await getUserProfile(uid, String(changes.email ?? ''));
+  await setDoc(
+    doc(db, 'users', uid),
+    {
+      email: String(changes.email ?? current.email ?? ''),
+      username: String(changes.username ?? current.username ?? deriveUsername(uid)),
+      photoURL: String(changes.photoURL ?? current.photoURL ?? ''),
+      updatedAt: serverTimestamp(),
+      createdAt: current.createdAt ?? serverTimestamp(),
+    },
+    { merge: true }
+  );
+}
+
+export async function uploadUserProfilePhoto(uid: string, file: File) {
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const storagePath = `users/${uid}/profile/${Date.now()}_${safeName}`;
+  const storageRef = ref(storage, storagePath);
+  await uploadBytes(storageRef, file, { contentType: file.type || 'image/jpeg' });
+  const downloadUrl = await getDownloadURL(storageRef);
+  return { storagePath, downloadUrl };
+}
+
+export async function followUser(followerUid: string, followingUid: string) {
+  if (!followerUid || !followingUid || followerUid === followingUid) return;
+  const followId = `${followerUid}_${followingUid}`;
+  await setDoc(doc(db, 'follows', followId), {
+    followerUid,
+    followingUid,
+    createdAt: serverTimestamp(),
+  });
+}
+
+export async function unfollowUser(followerUid: string, followingUid: string) {
+  if (!followerUid || !followingUid || followerUid === followingUid) return;
+  const followId = `${followerUid}_${followingUid}`;
+  await deleteDoc(doc(db, 'follows', followId));
+}
+
+export async function isFollowingUser(followerUid: string, followingUid: string): Promise<boolean> {
+  if (!followerUid || !followingUid || followerUid === followingUid) return false;
+  const followId = `${followerUid}_${followingUid}`;
+  const snap = await getDoc(doc(db, 'follows', followId));
+  return snap.exists();
+}
+
+async function getFollowerCount(uid: string): Promise<number> {
+  const snaps = await getDocs(query(collection(db, 'follows'), where('followingUid', '==', uid), limit(1000)));
+  return snaps.size;
+}
+
+async function getFollowingCount(uid: string): Promise<number> {
+  const snaps = await getDocs(query(collection(db, 'follows'), where('followerUid', '==', uid), limit(1000)));
+  return snaps.size;
+}
+
 function mapAnimalDocToFeedSighting(animalId: string, data: Record<string, unknown>): FeedSighting {
   const createdAt = extractCreatedAt(data);
   const createdAtLabel = createdAt ? createdAt.toLocaleString() : 'Just now';
+  const photoUrlsRaw = Array.isArray(data.latestSightingPhotoUrls) ? data.latestSightingPhotoUrls : [];
+  const photoUrls = photoUrlsRaw.map((x) => String(x)).filter(Boolean).slice(0, 3);
+  const coverPhotoUrl = String(data.coverPhotoUrl ?? '');
+  const safePhotoUrls = photoUrls.length > 0 ? photoUrls : coverPhotoUrl ? [coverPhotoUrl] : [];
   return {
     id: animalId,
     animalId,
@@ -475,7 +614,8 @@ function mapAnimalDocToFeedSighting(animalId: string, data: Record<string, unkno
     reporterEmail: String(data.createdByEmail ?? 'Unknown reporter'),
     type: (data.type as AnimalType) ?? 'other',
     caption: String(data.latestSightingCaption ?? ''),
-    photoUrl: String(data.coverPhotoUrl ?? ''),
+    photoUrl: coverPhotoUrl,
+    photoUrls: safePhotoUrls,
     createdAtLabel,
     aiRiskUrgency:
       data.aiRisk && typeof (data.aiRisk as Record<string, unknown>).urgency === 'string'
@@ -486,6 +626,88 @@ function mapAnimalDocToFeedSighting(animalId: string, data: Record<string, unkno
         ? String((data.aiRisk as Record<string, unknown>).reason).slice(0, 120)
         : undefined,
   };
+}
+
+async function attachReporterProfiles(rows: Array<FeedSighting & { createdAtTs?: number }>) {
+  const uniqueUids = Array.from(new Set(rows.map((row) => row.reporterUid).filter(Boolean)));
+  const profileEntries = await Promise.all(
+    uniqueUids.map(async (uid) => {
+      const profile = await getUserProfile(uid);
+      return [uid, profile] as const;
+    })
+  );
+  const profileMap = new Map(profileEntries);
+
+  return rows.map((row) => {
+    const profile = profileMap.get(row.reporterUid);
+    return {
+      ...row,
+      reporterUsername: profile?.username || deriveUsername(row.reporterEmail),
+      reporterPhotoURL: profile?.photoURL || '',
+    };
+  });
+}
+
+async function attachSocialMetadata(rows: FeedSighting[], viewerUid: string): Promise<FeedSighting[]> {
+  const enriched = await Promise.all(
+    rows.map(async (row) => {
+      const [likeCount, commentCount, comments, likedByMe] = await Promise.all([
+        getLikeCount(row.animalId),
+        getCommentCount(row.animalId),
+        listRecentFeedComments(row.animalId),
+        viewerUid ? hasLiked(row.animalId, viewerUid) : Promise.resolve(false),
+      ]);
+      return {
+        ...row,
+        likeCount,
+        commentCount,
+        comments,
+        likedByMe,
+      };
+    })
+  );
+  return enriched;
+}
+
+async function getLikeCount(animalId: string): Promise<number> {
+  const snaps = await getDocs(query(collection(db, 'animals', animalId, 'likes'), limit(500)));
+  return snaps.size;
+}
+
+async function getCommentCount(animalId: string): Promise<number> {
+  const snaps = await getDocs(query(collection(db, 'animals', animalId, 'comments'), limit(500)));
+  return snaps.size;
+}
+
+async function hasLiked(animalId: string, uid: string): Promise<boolean> {
+  const snap = await getDoc(doc(db, 'animals', animalId, 'likes', uid));
+  return snap.exists();
+}
+
+async function listRecentFeedComments(animalId: string): Promise<FeedComment[]> {
+  const snaps = await getDocs(
+    query(collection(db, 'animals', animalId, 'comments'), orderBy('createdAt', 'desc'), limit(3))
+  );
+
+  return snaps.docs.map((snap) => {
+    const data = snap.data() as Record<string, unknown>;
+    const rawCreatedAt = data.createdAt as { toDate?: () => Date } | undefined;
+    const createdAt = typeof rawCreatedAt?.toDate === 'function' ? rawCreatedAt.toDate() : null;
+    return {
+      id: snap.id,
+      authorUid: String(data.authorUid ?? ''),
+      authorEmail: String(data.authorEmail ?? ''),
+      content: String(data.content ?? ''),
+      createdAtLabel: createdAt ? createdAt.toLocaleString() : 'Just now',
+    };
+  });
+}
+
+function deriveUsername(emailOrId: string): string {
+  const value = String(emailOrId || '').trim();
+  if (!value) return 'straylink-user';
+  if (value.includes('@')) return value.split('@')[0] || 'straylink-user';
+  return value;
 }
 
 function extractCreatedAt(data: Record<string, unknown>): Date | null {

@@ -60,7 +60,7 @@ function getCurrentPosition(): Promise<{ lat: number; lng: number }> {
 export default function ReportPage() {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [fileError, setFileError] = useState('');
   const [locationMode, setLocationMode] = useState<LocationMode>('auto');
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -97,21 +97,28 @@ export default function ReportPage() {
     }
   }, [locationMode]);
 
-  function handleFileChange(next: File | null) {
+  function handleFileChange(next: File[]) {
     setSubmitState(null);
-    if (!next) {
-      setFile(null);
+    if (!next.length) {
+      setFiles([]);
       setFileError('');
       return;
     }
 
-    if (next.size > 3 * 1024 * 1024) {
-      setFile(null);
+    if (next.length > 3) {
+      setFiles([]);
+      setFileError('You can upload up to 3 photos only.');
+      return;
+    }
+
+    const oversized = next.find((file) => file.size > 3 * 1024 * 1024);
+    if (oversized) {
+      setFiles([]);
       setFileError('File exceeds 3MB. Please upload a smaller image.');
       return;
     }
 
-    setFile(next);
+    setFiles(next);
     setFileError('');
   }
 
@@ -119,7 +126,7 @@ export default function ReportPage() {
     e.preventDefault();
 
     if (!user) return toast.error('Please sign in to submit a sighting.');
-    if (!file) return toast.error('Please upload a photo.');
+    if (!files.length) return toast.error('Please upload at least one photo.');
     if (!location) return toast.error(locationMode === 'auto' ? 'Waiting for location detection. Please try again.' : 'Please pick a location on the map.');
 
     setLoading(true);
@@ -129,7 +136,11 @@ export default function ReportPage() {
       const animalId = await createAnimalId();
       const caseId = await createCaseId();
       const trackingToken = createTrackingToken();
-      const photo = await uploadCaseImage(caseId, file);
+      const uploadedPhotos = await Promise.all(files.map((file) => uploadCaseImage(caseId, file)));
+      const photo = uploadedPhotos[0];
+      if (!photo) {
+        throw new Error('No uploaded photos available.');
+      }
       const pendingAi = {
         model: 'gemini-pending',
         animalType: 'other' as const,
@@ -190,13 +201,15 @@ export default function ReportPage() {
         caption,
         photoUrl: photo.downloadUrl,
         photoPath: photo.storagePath,
+        photoUrls: uploadedPhotos.map((item) => item.downloadUrl),
+        photoPaths: uploadedPhotos.map((item) => item.storagePath),
         location,
       });
 
       toast.success('Sighting submitted. AI screening will continue in background.');
       setSubmitState({ ...created, caseId, trackingToken });
       setShowSuccessModal(true);
-      setFile(null);
+      setFiles([]);
       setLocation(null);
       setCaption('');
       if (locationMode === 'auto') {
@@ -229,7 +242,7 @@ export default function ReportPage() {
         ) : null}
 
         <form onSubmit={onSubmit} className="card space-y-4 p-5">
-          <UploadDropzone file={file} onFileChange={handleFileChange} error={fileError} capture="environment" />
+          <UploadDropzone files={files} onFilesChange={handleFileChange} error={fileError} capture="environment" />
 
           <div className="space-y-2">
             <label className="label">Location mode</label>

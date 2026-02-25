@@ -23,6 +23,7 @@ describe('Home page', () => {
       return () => {};
     });
     render(<HomePage />);
+    expect(screen.getByTestId('home-hero')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /login \/ join/i })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /submit a report/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /admin login/i })).not.toBeInTheDocument();
@@ -36,6 +37,7 @@ describe('Home page', () => {
       return () => {};
     });
     render(<HomePage />);
+    expect(screen.getByTestId('home-hero')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /login \/ join/i })).not.toBeInTheDocument();
   });
 

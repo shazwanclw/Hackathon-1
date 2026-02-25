@@ -51,19 +51,19 @@ export default function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-brand-300/80 bg-[rgba(255,247,230,0.92)] backdrop-blur-md">
-      <div className="container-shell flex min-h-16 items-center justify-between gap-3 py-2">
-        <Link href="/" className="font-[var(--font-display)] text-3xl font-semibold tracking-tight text-brand-900">
+    <header className="sticky top-0 z-30 bg-[rgba(239,226,194,0.94)] backdrop-blur-sm">
+      <div className="container-shell flex min-h-16 items-center justify-between gap-3 py-4">
+        <Link href="/" className="logo-mark">
           StrayLink
         </Link>
-        <nav className="flex flex-wrap items-center justify-end gap-2">
+        <nav className="flex flex-wrap items-center justify-end gap-1">
           {links.map((item) => {
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={active ? 'segment-active' : 'segment'}
+                className={active ? 'nav-pill-active' : 'nav-pill'}
               >
                 {item.label}
               </Link>
@@ -72,7 +72,7 @@ export default function Navbar() {
           {!user && !guest ? (
             <Link
               href="/auth"
-              className={pathname === '/auth' ? 'segment-active' : 'segment'}
+              className={pathname === '/auth' ? 'nav-pill-active' : 'nav-pill'}
             >
               Login
             </Link>

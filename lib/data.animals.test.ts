@@ -29,6 +29,7 @@ describe('animal thread payload builders', () => {
       sightingCount: 1,
       latestSightingCaption: 'Near the park gate',
       latestSightingPhotoPath: 'animals/a1/sightings/s1.jpg',
+      latestSightingPhotoUrls: ['https://example.com/p.jpg'],
     });
   });
 
@@ -50,6 +51,8 @@ describe('animal thread payload builders', () => {
       caption: 'Sleeping by storefront',
       photoUrl: 'https://example.com/d.jpg',
       photoPath: 'animals/animal-1/sightings/abc.jpg',
+      photoUrls: ['https://example.com/d.jpg'],
+      photoPaths: ['animals/animal-1/sightings/abc.jpg'],
       location: { lat: 12.34, lng: 56.78 },
       authorUid: 'user-2',
       authorEmail: 'user-2@example.com',

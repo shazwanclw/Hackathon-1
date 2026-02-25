@@ -115,6 +115,7 @@ export interface AnimalDoc {
   sightingCount: number;
   latestSightingCaption: string;
   latestSightingPhotoPath: string;
+  latestSightingPhotoUrls?: string[];
   aiRisk?: AiRiskSummary & {
     model: string;
     createdAt?: unknown;
@@ -130,6 +131,8 @@ export interface AnimalSightingDoc {
   caption: string;
   photoUrl: string;
   photoPath: string;
+  photoUrls?: string[];
+  photoPaths?: string[];
   location: {
     lat: number;
     lng: number;
@@ -148,18 +151,45 @@ export interface FeedSighting {
   animalId: string;
   reporterUid: string;
   reporterEmail: string;
+  reporterUsername?: string;
+  reporterPhotoURL?: string;
   type: AnimalType;
   caption: string;
   photoUrl: string;
+  photoUrls?: string[];
   createdAtLabel: string;
   aiRiskUrgency?: Urgency;
   aiRiskReasonPreview?: string;
+  likeCount?: number;
+  commentCount?: number;
+  likedByMe?: boolean;
+  comments?: FeedComment[];
+}
+
+export interface FeedComment {
+  id: string;
+  authorUid: string;
+  authorEmail: string;
+  content: string;
+  createdAtLabel: string;
 }
 
 export interface UserProfileSummary {
   uid: string;
   email: string;
+  username: string;
+  photoURL: string;
+  followersCount: number;
+  followingCount: number;
   reportCount: number;
+}
+
+export interface UserProfileDoc {
+  email: string;
+  username: string;
+  photoURL: string;
+  createdAt?: unknown;
+  updatedAt?: unknown;
 }
 
 export interface AnimalMapMarker {

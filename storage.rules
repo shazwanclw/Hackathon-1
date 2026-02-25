@@ -26,6 +26,15 @@ service firebase.storage {
       allow delete: if isAdmin();
     }
 
+    match /users/{uid}/profile/{fileName} {
+      allow read: if true;
+      allow write: if isAuthed()
+        && request.auth.uid == uid
+        && request.resource.size < 3 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if isAuthed() && request.auth.uid == uid;
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }

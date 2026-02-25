@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from 'react';
 import React from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { setGuestAccess } from '@/lib/access';
 import { isUserAdmin, loginWithEmail, loginWithGoogle, registerWithEmail } from '@/lib/auth';
@@ -78,66 +79,72 @@ export default function AuthPage() {
   }
 
   return (
-    <section className="mx-auto max-w-md py-6">
-      <div className="card-elevated space-y-4">
-        <div className="flex gap-2">
-          <button
-            type="button"
-            aria-label="Switch to login"
-            className={mode === 'login' ? 'segment-active' : 'segment'}
-            onClick={() => setMode('login')}
-          >
-            Login
-          </button>
-          <button
-            type="button"
-            aria-label="Switch to register"
-            className={mode === 'register' ? 'segment-active' : 'segment'}
-            onClick={() => setMode('register')}
-          >
-            Register
-          </button>
+    <section className="py-2">
+      <div data-testid="auth-hero" className="hero-shell min-h-[72vh]">
+        <Image src="/images/hero-cat.jpeg" alt="" fill priority className="hero-image" />
+        <div className="hero-tint bg-[linear-gradient(90deg,rgba(25,18,12,0.5)_0%,rgba(25,18,12,0.7)_52%,rgba(25,18,12,0.78)_100%)]" />
+        <div className="hero-content flex min-h-[72vh] items-center justify-end">
+          <div className="w-full max-w-xl rounded-[2rem] bg-[rgba(115,96,74,0.92)] p-7 text-white shadow-[0_22px_40px_rgba(0,0,0,0.35)] backdrop-blur-sm sm:p-8">
+            <div className="mb-5 flex gap-3">
+              <button
+                type="button"
+                aria-label="Switch to login"
+                className={mode === 'login' ? 'segment-active' : 'segment'}
+                onClick={() => setMode('login')}
+              >
+                Login
+              </button>
+              <button
+                type="button"
+                aria-label="Switch to register"
+                className={mode === 'register' ? 'segment-active' : 'segment'}
+                onClick={() => setMode('register')}
+              >
+                Register
+              </button>
+            </div>
+
+            <h1 className="font-[var(--font-body)] text-5xl font-semibold leading-tight text-white">{title}</h1>
+
+            <button className="btn-secondary mt-5 w-full border-brand-100/40 bg-[#f2e4be] text-2xl font-medium text-brand-900" type="button" onClick={onGoogleSignIn} disabled={submitting}>
+              {submitting ? 'Please wait...' : 'Continue with Google'}
+            </button>
+
+            <form className="mt-5 space-y-3" onSubmit={onSubmit}>
+              <div className="space-y-1">
+                <label htmlFor="email" className="block text-3xl font-medium text-white">Email</label>
+                <input
+                  id="email"
+                  type="email"
+                  className="w-full rounded-3xl border border-white/40 bg-white px-4 py-2.5 text-2xl text-brand-900 outline-none focus:ring-2 focus:ring-honey-300"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <label htmlFor="password" className="block text-3xl font-medium text-white">Password</label>
+                <input
+                  id="password"
+                  type="password"
+                  className="w-full rounded-3xl border border-white/40 bg-white px-4 py-2.5 text-2xl text-brand-900 outline-none focus:ring-2 focus:ring-honey-300"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  minLength={6}
+                  required
+                />
+              </div>
+              {error ? <p className="text-sm text-rose-200">{error}</p> : null}
+              <button className="btn-primary w-full bg-brand-800 text-4xl font-medium text-white sm:text-[2rem]" type="submit" disabled={submitting}>
+                {submitting ? 'Please wait...' : mode === 'login' ? 'Login' : 'Create Account'}
+              </button>
+            </form>
+
+            <button className="btn-ghost mt-4 w-full border-white/40 bg-white text-2xl font-medium text-brand-900 sm:text-[1.8rem]" type="button" onClick={onGuest}>
+              Join as Guest
+            </button>
+          </div>
         </div>
-
-        <h1 className="font-[var(--font-display)] text-4xl font-semibold text-brand-900">{title}</h1>
-
-        <button className="btn-secondary w-full" type="button" onClick={onGoogleSignIn} disabled={submitting}>
-          {submitting ? 'Please wait...' : 'Continue with Google'}
-        </button>
-
-        <form className="space-y-3" onSubmit={onSubmit}>
-          <div className="space-y-1">
-            <label htmlFor="email" className="label">Email</label>
-            <input
-              id="email"
-              type="email"
-              className="input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-1">
-            <label htmlFor="password" className="label">Password</label>
-            <input
-              id="password"
-              type="password"
-              className="input"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              minLength={6}
-              required
-            />
-          </div>
-          {error ? <p className="text-sm text-rose-700">{error}</p> : null}
-          <button className="btn-primary w-full" type="submit" disabled={submitting}>
-            {submitting ? 'Please wait...' : mode === 'login' ? 'Login' : 'Create Account'}
-          </button>
-        </form>
-
-        <button className="btn-ghost w-full" type="button" onClick={onGuest}>
-          Join as Guest
-        </button>
       </div>
     </section>
   );

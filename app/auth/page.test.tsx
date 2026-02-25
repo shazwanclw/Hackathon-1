@@ -31,6 +31,7 @@ describe('Public auth page', () => {
 
   it('renders login mode by default', () => {
     render(<AuthPage />);
+    expect(screen.getByTestId('auth-hero')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^login$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
