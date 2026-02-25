@@ -6,8 +6,8 @@ import { useEffect, useMemo, useState } from 'react';
 import PublicAccessGuard from '@/components/PublicAccessGuard';
 import { ErrorState, LoadingState } from '@/components/States';
 import { observeAuth } from '@/lib/auth';
-import { addCommentToAnimalFeed, listFeedSightings, toggleLikeInAnimalFeed } from '@/lib/data';
-import { FeedSighting } from '@/lib/types';
+import { addCommentToAnimalFeed, getAnimalById, listFeedSightings, toggleLikeInAnimalFeed } from '@/lib/data';
+import { AnimalProfile, FeedSighting } from '@/lib/types';
 
 function FeedPhotoCarousel({ item }: { item: FeedSighting }) {
   const photos = useMemo(
@@ -87,6 +87,10 @@ export default function FeedPage() {
   const [viewerEmail, setViewerEmail] = useState('');
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
+  const [activeAiScan, setActiveAiScan] = useState<FeedSighting | null>(null);
+  const [activeAiScanProfile, setActiveAiScanProfile] = useState<AnimalProfile | null>(null);
+  const [aiScanLoading, setAiScanLoading] = useState(false);
+  const [aiScanError, setAiScanError] = useState('');
 
   useEffect(() => {
     const unsub = observeAuth((user) => {
@@ -144,6 +148,40 @@ export default function FeedPage() {
     setItems(rows);
   }
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAiScan() {
+      if (!activeAiScan) {
+        setActiveAiScanProfile(null);
+        setAiScanError('');
+        setAiScanLoading(false);
+        return;
+      }
+
+      setAiScanLoading(true);
+      setAiScanError('');
+      try {
+        const animal = await getAnimalById(activeAiScan.animalId);
+        if (!cancelled) {
+          setActiveAiScanProfile(animal);
+          if (!animal) setAiScanError('Animal profile not found.');
+        }
+      } catch {
+        if (!cancelled) {
+          setAiScanError('Failed to load AI health scan.');
+        }
+      } finally {
+        if (!cancelled) setAiScanLoading(false);
+      }
+    }
+
+    loadAiScan();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeAiScan]);
+
   return (
     <PublicAccessGuard>
       <section className="mx-auto max-w-2xl space-y-4">
@@ -171,44 +209,73 @@ export default function FeedPage() {
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold text-brand-900">{item.reporterUsername || item.reporterEmail}</p>
-                      <p className="truncate text-xs text-muted">{item.reporterEmail}</p>
+                      <Link
+                        className="truncate font-semibold text-brand-900 hover:underline"
+                        href={`/profile?uid=${encodeURIComponent(item.reporterUid)}`}
+                      >
+                        {item.reporterUsername || item.reporterEmail}
+                      </Link>
                     </div>
                     <p className="text-xs text-brand-800/70">{item.createdAtLabel}</p>
                   </div>
 
                   <FeedPhotoCarousel item={item} />
 
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      className="btn-ghost px-3 py-1 text-xs"
-                      disabled={!viewerUid}
-                      onClick={() => onLike(item)}
-                    >
-                      {item.likedByMe ? 'Unlike' : 'Like'} ({item.likeCount ?? 0})
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-ghost px-3 py-1 text-xs"
-                      onClick={() => setExpandedComments((prev) => ({ ...prev, [item.id]: !prev[item.id] }))}
-                    >
-                      Comment ({item.commentCount ?? 0})
-                    </button>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        className="btn-ghost px-3 py-1 text-xs"
+                        aria-label="Like post"
+                        disabled={!viewerUid}
+                        onClick={() => onLike(item)}
+                      >
+                        {'\u2764\ufe0f'} {item.likeCount ?? 0}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-ghost px-3 py-1 text-xs"
+                        aria-label="Toggle comments"
+                        onClick={() => setExpandedComments((prev) => ({ ...prev, [item.id]: !prev[item.id] }))}
+                      >
+                        {'\ud83d\udcac'} {item.commentCount ?? 0}
+                      </button>
+                    </div>
+                    {item.aiRiskUrgency ? (
+                      <p className="text-xs text-muted">
+                        Urgency Level: <span className="font-semibold capitalize text-brand-900">{item.aiRiskUrgency}</span>
+                      </p>
+                    ) : null}
                   </div>
 
-                  {item.comments && item.comments.length > 0 ? (
-                    <div className="space-y-1 text-xs text-muted">
-                      {item.comments.map((comment) => (
-                        <p key={comment.id}>
-                          <span className="font-semibold text-brand-900">{comment.authorEmail}</span>: {comment.content}
-                        </p>
-                      ))}
-                    </div>
-                  ) : null}
+                  <p className="text-brand-900">{item.caption || 'No caption provided.'}</p>
+
+                  <div className="flex gap-3 text-sm">
+                    <button type="button" className="btn-ghost px-3 py-1 text-xs" onClick={() => setActiveAiScan(item)}>
+                      See AI health scan
+                    </button>
+                    <Link className="btn-secondary" href={`/animal?id=${item.animalId}`}>
+                      Open animal profile
+                    </Link>
+                    <Link className="btn-ghost" href={`/map?animalId=${item.animalId}`}>
+                      View on map
+                    </Link>
+                  </div>
 
                   {expandedComments[item.id] ? (
-                    <div className="space-y-2">
+                    <div className="space-y-2 border-t border-brand-200/70 pt-3">
+                      {item.comments && item.comments.length > 0 ? (
+                        <div className="space-y-1 text-xs text-muted">
+                          {item.comments.map((comment) => (
+                            <p key={comment.id}>
+                              <span className="font-semibold text-brand-900">{comment.authorEmail}</span>: {comment.content}
+                            </p>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted">No comments yet.</p>
+                      )}
+
                       {viewerUid ? (
                         <>
                           <input
@@ -226,32 +293,44 @@ export default function FeedPage() {
                       )}
                     </div>
                   ) : null}
-
-                  <p className="text-brand-900">{item.caption || 'No caption provided.'}</p>
-
-                  {item.aiRiskUrgency ? (
-                    <p className="text-xs text-muted">
-                      Urgency Level: <span className="font-semibold capitalize text-brand-900">{item.aiRiskUrgency}</span>
-                    </p>
-                  ) : null}
-
-                  <Link className="btn-ghost px-3 py-1 text-xs" href={`/animal?id=${item.animalId}`}>
-                    See AI health scan
-                  </Link>
-
-                  <div className="flex gap-3 text-sm">
-                    <Link className="btn-secondary" href={`/animal?id=${item.animalId}`}>
-                      Open animal profile
-                    </Link>
-                    <Link className="btn-ghost" href={`/map?animalId=${item.animalId}`}>
-                      View on map
-                    </Link>
-                  </div>
                 </div>
               </article>
             ))
           : null}
       </section>
+
+      {activeAiScan ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-900/45 p-4">
+          <div className="card-elevated w-full max-w-md">
+            <h2 className="font-[var(--font-display)] text-3xl font-semibold text-brand-900">AI Health Scan</h2>
+            {aiScanLoading ? <p className="mt-3 text-sm text-muted">Loading AI health scan...</p> : null}
+            {!aiScanLoading && aiScanError ? <p className="mt-3 text-sm text-muted">{aiScanError}</p> : null}
+            {!aiScanLoading && !aiScanError && activeAiScanProfile?.aiRisk ? (
+              <div className="mt-3 rounded-xl border border-brand-300 bg-brand-100/55 p-3 text-sm">
+                <p className="font-semibold text-brand-900">AI welfare risk screening (not diagnosis)</p>
+                <p className="capitalize text-brand-900">Urgency: {activeAiScanProfile.aiRisk.urgency}</p>
+                <p className="text-brand-900">Reason: {activeAiScanProfile.aiRisk.reason}</p>
+                <p className="text-brand-900">
+                  Visible indicators: {activeAiScanProfile.aiRisk.visibleIndicators.join(', ') || 'none'}
+                </p>
+                <p className="text-brand-900">Confidence: {activeAiScanProfile.aiRisk.confidence}</p>
+                <p className="text-xs text-muted">{activeAiScanProfile.aiRisk.disclaimer}</p>
+                <p className="text-xs text-brand-800/70">Generated: {activeAiScanProfile.aiRisk.createdAtLabel}</p>
+              </div>
+            ) : (
+              !aiScanLoading && !aiScanError ? <p className="mt-3 text-sm text-muted">AI welfare screening not available yet.</p> : null
+            )}
+            <div className="mt-5 flex gap-2">
+              <button className="btn-secondary" type="button" onClick={() => setActiveAiScan(null)}>
+                Close
+              </button>
+              <Link className="btn-primary" href={`/animal?id=${activeAiScan.animalId}`}>
+                Open full profile
+              </Link>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </PublicAccessGuard>
   );
 }

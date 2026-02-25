@@ -40,8 +40,8 @@ export default function Navbar() {
 
   if (user || guest) {
     links.push({ href: '/report', label: 'Post' });
-    links.push({ href: '/feed', label: 'Feed' });
     links.push({ href: '/map', label: 'Map' });
+    links.push({ href: '/feed', label: 'Feed' });
   }
   if (user) {
     links.push({ href: '/profile', label: 'Profile' });

@@ -3,7 +3,7 @@
 import React from 'react';
 import { Suspense } from 'react';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import PublicAccessGuard from '@/components/PublicAccessGuard';
 import { EmptyState, ErrorState, LoadingState } from '@/components/States';
@@ -25,8 +25,9 @@ function ProfilePageContent() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [usernameDraft, setUsernameDraft] = useState('');
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [editingUsername, setEditingUsername] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const unsub = observeAuth((user) => {
@@ -78,24 +79,37 @@ function ProfilePageContent() {
   const viewedUid = queryUid || authUid;
   const isOwnProfile = !!authUid && authUid === viewedUid;
 
-  async function onSaveProfile() {
+  async function onSaveUsername() {
     if (!authUid || !isOwnProfile || !profile) return;
     setSavingProfile(true);
     try {
-      let nextPhotoURL = profile.photoURL;
-      if (photoFile) {
-        const uploaded = await uploadUserProfilePhoto(authUid, photoFile);
-        nextPhotoURL = uploaded.downloadUrl;
-      }
       await saveUserProfile(authUid, {
         email: profile.email,
         username: usernameDraft.trim() || profile.username,
-        photoURL: nextPhotoURL,
+        photoURL: profile.photoURL,
       });
       const refreshed = await getUserProfileSummary(authUid);
       setProfile(refreshed);
       setUsernameDraft(refreshed.username);
-      setPhotoFile(null);
+      setEditingUsername(false);
+    } finally {
+      setSavingProfile(false);
+    }
+  }
+
+  async function onPhotoPicked(file: File | null) {
+    if (!file || !authUid || !isOwnProfile || !profile) return;
+    setSavingProfile(true);
+    try {
+      const uploaded = await uploadUserProfilePhoto(authUid, file);
+      await saveUserProfile(authUid, {
+        email: profile.email,
+        username: usernameDraft.trim() || profile.username,
+        photoURL: uploaded.downloadUrl,
+      });
+      const refreshed = await getUserProfileSummary(authUid);
+      setProfile(refreshed);
+      setUsernameDraft(refreshed.username);
     } finally {
       setSavingProfile(false);
     }
@@ -130,18 +144,79 @@ function ProfilePageContent() {
           <article className="card p-5 text-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
-                {profile.photoURL ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={profile.photoURL} alt={`${profile.username} avatar`} className="h-16 w-16 rounded-full object-cover" />
-                ) : (
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-200 text-xl font-bold text-brand-900">
-                    {profile.username.slice(0, 1).toUpperCase()}
+                <div className="relative">
+                  {profile.photoURL ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={profile.photoURL} alt={`${profile.username} avatar`} className="h-16 w-16 rounded-full object-cover" />
+                  ) : (
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-200 text-xl font-bold text-brand-900">
+                      {profile.username.slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                  {isOwnProfile ? (
+                    <>
+                      <button
+                        type="button"
+                        aria-label="Edit profile photo"
+                        className="absolute -bottom-1 -right-1 rounded-full border border-brand-300 bg-honey-200 px-2 py-1 text-[10px] text-brand-900"
+                        onClick={() => photoInputRef.current?.click()}
+                        disabled={savingProfile}
+                      >
+                        ✎
+                      </button>
+                      <input
+                        ref={photoInputRef}
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={(event) => onPhotoPicked(event.target.files?.[0] ?? null)}
+                      />
+                    </>
+                  ) : null}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    {editingUsername && isOwnProfile ? (
+                      <input
+                        className="input h-9 py-1"
+                        aria-label="Edit username"
+                        value={usernameDraft}
+                        onChange={(event) => setUsernameDraft(event.target.value)}
+                      />
+                    ) : (
+                      <p className="truncate text-xl font-semibold text-brand-900">{profile.username}</p>
+                    )}
+                    {isOwnProfile ? (
+                      <button
+                        type="button"
+                        aria-label="Edit username"
+                        className="rounded-full border border-brand-300 bg-honey-200 px-2 py-1 text-[10px] text-brand-900"
+                        onClick={() => setEditingUsername((prev) => !prev)}
+                        disabled={savingProfile}
+                      >
+                        ✎
+                      </button>
+                    ) : null}
                   </div>
-                )}
-                <div>
-                  <p className="text-xl font-semibold text-brand-900">{profile.username}</p>
                   <p className="text-sm text-muted">{profile.email}</p>
-                  <p className="text-xs text-muted">User ID: {profile.uid}</p>
+                  {editingUsername && isOwnProfile ? (
+                    <div className="mt-2 flex gap-2">
+                      <button className="btn-secondary px-3 py-1 text-xs" type="button" onClick={onSaveUsername} disabled={savingProfile}>
+                        {savingProfile ? 'Saving...' : 'Save username'}
+                      </button>
+                      <button
+                        className="btn-ghost px-3 py-1 text-xs"
+                        type="button"
+                        onClick={() => {
+                          setUsernameDraft(profile.username);
+                          setEditingUsername(false);
+                        }}
+                        disabled={savingProfile}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </div>
               {!isOwnProfile ? (
@@ -153,52 +228,24 @@ function ProfilePageContent() {
             <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted">
               <p>Followers: {profile.followersCount}</p>
               <p>Following: {profile.followingCount}</p>
-              <p>Reports submitted: {profile.reportCount}</p>
+              <p>Posts: {profile.reportCount}</p>
             </div>
-            {isOwnProfile ? (
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="label" htmlFor="profile-username">Username</label>
-                  <input
-                    id="profile-username"
-                    className="input"
-                    value={usernameDraft}
-                    onChange={(event) => setUsernameDraft(event.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="label" htmlFor="profile-photo">Profile photo</label>
-                  <input
-                    id="profile-photo"
-                    type="file"
-                    className="input"
-                    accept="image/*"
-                    onChange={(event) => setPhotoFile(event.target.files?.[0] ?? null)}
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <button className="btn-secondary" type="button" onClick={onSaveProfile} disabled={savingProfile}>
-                    {savingProfile ? 'Saving...' : 'Save profile'}
-                  </button>
-                </div>
-              </div>
-            ) : null}
           </article>
         ) : null}
 
         {!loading && !error ? (
           <section className="space-y-3">
-            <h2 className="font-[var(--font-display)] text-2xl font-semibold text-brand-900">Reports</h2>
-            {reports.length === 0 ? <EmptyState text="No reports found for this user." /> : null}
+            <h2 className="font-[var(--font-display)] text-2xl font-semibold text-brand-900">Posts</h2>
+            {reports.length === 0 ? <EmptyState text="No posts found for this user." /> : null}
             {reports.map((item) => (
               <article key={item.id} className="card overflow-hidden">
                 {(item.photoUrls && item.photoUrls.length > 0) || item.photoUrl ? (
-                  <div className="grid grid-cols-3 gap-2 p-4 pb-0">
-                    {(item.photoUrls && item.photoUrls.length > 0 ? item.photoUrls : [item.photoUrl]).slice(0, 3).map((photoUrl, index) => (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img key={`${item.id}-${index}`} src={photoUrl} alt={`${item.type} sighting ${index + 1}`} className="h-44 w-full rounded-xl object-cover" />
-                    ))}
-                  </div>
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={(item.photoUrls && item.photoUrls.length > 0 ? item.photoUrls : [item.photoUrl])[0]}
+                    alt={`${item.type} sighting`}
+                    className="h-80 w-full object-cover"
+                  />
                 ) : null}
                 <div className="space-y-2 p-4 text-sm">
                   <p className="font-semibold capitalize text-brand-900">{item.type}</p>

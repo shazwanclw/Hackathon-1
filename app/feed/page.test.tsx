@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { User } from 'firebase/auth';
 import FeedPage from './page';
-import { addCommentToAnimalFeed, listFeedSightings, toggleLikeInAnimalFeed } from '@/lib/data';
+import { addCommentToAnimalFeed, getAnimalById, listFeedSightings, toggleLikeInAnimalFeed } from '@/lib/data';
 import { observeAuth } from '@/lib/auth';
 
 vi.mock('@/components/PublicAccessGuard', () => ({
@@ -19,6 +19,7 @@ vi.mock('@/lib/data', () => ({
   listFeedSightings: vi.fn(),
   toggleLikeInAnimalFeed: vi.fn(),
   addCommentToAnimalFeed: vi.fn(),
+  getAnimalById: vi.fn(),
 }));
 
 vi.mock('@/lib/auth', () => ({
@@ -72,6 +73,25 @@ describe('Feed page', () => {
     ] as never);
     vi.mocked(toggleLikeInAnimalFeed).mockResolvedValue(undefined as never);
     vi.mocked(addCommentToAnimalFeed).mockResolvedValue(undefined as never);
+    vi.mocked(getAnimalById).mockResolvedValue({
+      id: 'a1',
+      type: 'cat',
+      coverPhotoUrl: 'https://example.com/cat.jpg',
+      lastSeenAtLabel: 'Today',
+      sightingCount: 4,
+      aiRisk: {
+        animalType: 'cat',
+        visibleIndicators: ['possible limp', 'patchy hair loss'],
+        urgency: 'high',
+        reason: 'Visible limping and patchy fur from this angle.',
+        confidence: 0.88,
+        disclaimer: 'Not a medical diagnosis. For triage only. Requires human verification.',
+        needsHumanVerification: true,
+        error: null,
+        model: 'gemini',
+        createdAtLabel: 'Feb 25, 2026 5:00 PM',
+      },
+    } as never);
 
     render(<FeedPage />);
 
@@ -79,26 +99,41 @@ describe('Feed page', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/zaidi/i)).toBeInTheDocument();
-      expect(screen.getByText(/reporter@example.com/i)).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /zaidi/i })).toHaveAttribute('href', '/profile?uid=u-1');
+      expect(screen.queryByText(/reporter@example.com/i)).not.toBeInTheDocument();
       expect(screen.queryByText(/reported by:/i)).not.toBeInTheDocument();
       expect(screen.getByText(/near the school gate/i)).toBeInTheDocument();
       expect(screen.getByText(/urgency level/i)).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /see ai health scan/i })).toHaveAttribute('href', '/animal?id=a1');
+      expect(screen.getByRole('button', { name: /see ai health scan/i })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /open animal profile/i })).toHaveAttribute('href', '/animal?id=a1');
       expect(screen.getByRole('link', { name: /view on map/i })).toHaveAttribute('href', '/map?animalId=a1');
       expect(screen.getAllByAltText(/cat sighting/i)).toHaveLength(1);
       expect(screen.getByRole('button', { name: /previous photo/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /next photo/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /like/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /comment/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /like post/i })).toHaveTextContent('1');
+      expect(screen.getByRole('button', { name: /toggle comments/i })).toHaveTextContent('1');
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /like/i }));
+    fireEvent.click(screen.getByRole('button', { name: /like post/i }));
     await waitFor(() => {
       expect(toggleLikeInAnimalFeed).toHaveBeenCalledWith('a1', 'viewer-1', false);
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /comment/i }));
+    expect(screen.queryByText(/please rescue soon/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /toggle comments/i }));
+    expect(screen.getByText(/please rescue soon/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /see ai health scan/i }));
+    expect(screen.getByRole('heading', { name: /ai health scan/i })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(getAnimalById).toHaveBeenCalledWith('a1');
+      expect(screen.getByText(/ai welfare risk screening/i)).toBeInTheDocument();
+      expect(screen.getByText(/visible indicators:/i)).toBeInTheDocument();
+      expect(screen.getByText(/confidence:/i)).toBeInTheDocument();
+      expect(screen.getByText(/generated:/i)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole('button', { name: /close/i }));
+
     fireEvent.change(screen.getByPlaceholderText(/add a comment/i), { target: { value: 'hello there' } });
     fireEvent.click(screen.getByRole('button', { name: /post comment/i }));
     await waitFor(() => {

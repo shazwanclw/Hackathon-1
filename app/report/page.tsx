@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { User } from 'firebase/auth';
 import PublicAccessGuard from '@/components/PublicAccessGuard';
 import UploadDropzone from '@/components/UploadDropzone';
+import { generateCaptionDraftFromImage } from '@/lib/aiCaption';
 import { observeAuth } from '@/lib/auth';
 import { reverseGeocode } from '@/lib/geocoding';
 import {
@@ -68,6 +69,7 @@ export default function ReportPage() {
   const [locationMessage, setLocationMessage] = useState('Detecting your current location...');
   const [locationLabel, setLocationLabel] = useState('');
   const [caption, setCaption] = useState('');
+  const [captionDraftLoading, setCaptionDraftLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitState, setSubmitState] = useState<SubmitState>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -128,8 +130,9 @@ export default function ReportPage() {
     };
   }, [location]);
 
-  function handleFileChange(next: File[]) {
+  async function handleFileChange(next: File[]) {
     setSubmitState(null);
+    setCaptionDraftLoading(false);
     if (!next.length) {
       setFiles([]);
       setFileError('');
@@ -151,6 +154,22 @@ export default function ReportPage() {
 
     setFiles(next);
     setFileError('');
+
+    if (!user) return;
+
+    if (!caption.trim()) {
+      setCaptionDraftLoading(true);
+      try {
+        const generated = await generateCaptionDraftFromImage(next[0]);
+        if (generated) {
+          setCaption((current) => (current.trim() ? current : generated));
+        }
+      } catch {
+        toast.error('Could not generate caption draft. You can still write your own caption.');
+      } finally {
+        setCaptionDraftLoading(false);
+      }
+    }
   }
 
   async function onSubmit(e: FormEvent) {
@@ -284,6 +303,7 @@ export default function ReportPage() {
               onChange={(e) => setCaption(e.target.value)}
               placeholder="Seen near the bus stop around 7pm."
             />
+            {captionDraftLoading ? <p className="mt-1 text-xs text-muted">Generating caption draft...</p> : null}
           </div>
 
           <div className="space-y-2">

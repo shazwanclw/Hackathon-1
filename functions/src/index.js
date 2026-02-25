@@ -1,4 +1,5 @@
 const { onDocumentWritten } = require('firebase-functions/v2/firestore');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { logger } = require('firebase-functions');
 const { defineSecret } = require('firebase-functions/params');
 const admin = require('firebase-admin');
@@ -32,6 +33,12 @@ const USER_PROMPT =
   '  "needsHumanVerification": true,\n' +
   '  "disclaimer": "Not a medical diagnosis. For triage only. Requires human verification."\n' +
   '}';
+
+const CAPTION_SYSTEM_PROMPT =
+  'You write short social media captions for stray animal sighting posts. Output plain text only, one sentence, no hashtags, no emojis.';
+
+const CAPTION_USER_PROMPT =
+  'Create one simple caption draft describing what is visible in this image. Keep it neutral and concise (8-18 words).';
 
 const DISCLAIMER = 'Not a medical diagnosis. For triage only. Requires human verification.';
 const geminiApiKey = defineSecret('GEMINI_API_KEY');
@@ -161,6 +168,104 @@ async function callGemini({ imageBase64, mimeType, apiKey }) {
     parsed: parseGeminiRiskJson(text),
   };
 }
+
+function sanitizeCaptionDraft(text) {
+  return String(text || '')
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^['"`]+|['"`]+$/g, '')
+    .slice(0, 140);
+}
+
+async function callGeminiCaption({ imageBase64, mimeType, apiKey }) {
+  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  if (!apiKey) {
+    throw new Error('Missing GEMINI_API_KEY.');
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      system_instruction: {
+        parts: [{ text: CAPTION_SYSTEM_PROMPT }],
+      },
+      contents: [
+        {
+          parts: [
+            { text: CAPTION_USER_PROMPT },
+            {
+              inline_data: {
+                mime_type: mimeType,
+                data: imageBase64,
+              },
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.8,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Gemini caption API failed (${response.status}): ${errText.slice(0, 300)}`);
+  }
+
+  const body = await response.json();
+  const text = body?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text || typeof text !== 'string') {
+    throw new Error('Gemini caption returned empty content.');
+  }
+
+  return sanitizeCaptionDraft(text);
+}
+
+exports.generateCaptionDraft = onCall(
+  {
+    region: 'us-central1',
+    maxInstances: 10,
+    concurrency: 30,
+    secrets: [geminiApiKey],
+  },
+  async (request) => {
+    if (!request.auth?.uid) {
+      throw new HttpsError('unauthenticated', 'Sign-in required.');
+    }
+
+    const imageBase64 = String(request.data?.imageBase64 || '').trim();
+    const mimeType = String(request.data?.mimeType || 'image/jpeg').trim().toLowerCase();
+    if (!imageBase64) {
+      throw new HttpsError('invalid-argument', 'imageBase64 is required.');
+    }
+
+    const allowedMime = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']);
+    if (!allowedMime.has(mimeType)) {
+      throw new HttpsError('invalid-argument', 'Unsupported image type.');
+    }
+
+    if (imageBase64.length > 6 * 1024 * 1024) {
+      throw new HttpsError('invalid-argument', 'Image payload too large.');
+    }
+
+    try {
+      const caption = await callGeminiCaption({
+        imageBase64,
+        mimeType,
+        apiKey: geminiApiKey.value(),
+      });
+      return { caption };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Caption generation failed.';
+      logger.error(`Caption generation failed: ${message}`);
+      throw new HttpsError('internal', 'Failed to generate caption draft.');
+    }
+  }
+);
 
 exports.screenCaseAiRisk = onDocumentWritten(
   {
