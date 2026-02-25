@@ -13,6 +13,12 @@ type MapCase = {
   location?: { lat?: number; lng?: number };
 };
 
+type HotspotCase = {
+  id: string;
+  caseId?: string;
+  location?: { lat?: number; lng?: number };
+};
+
 const defaultMarkerIcon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -33,37 +39,66 @@ function buildPhotoMarkerIcon(photoUrl: string) {
   });
 }
 
-export default function MapView({ cases }: { cases: MapCase[] }) {
+const hotspotMarkerIcon = L.divIcon({
+  className: 'hotspot-marker',
+  html: '<span class="hotspot-marker__dot" />',
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
+});
+
+export default function MapView({
+  cases,
+  mode = 'normal',
+  hotspots = [],
+}: {
+  cases: MapCase[];
+  mode?: 'normal' | 'hotspot';
+  hotspots?: HotspotCase[];
+}) {
   const router = useRouter();
   const points = cases
     .filter((item) => typeof item.location?.lat === 'number' && typeof item.location?.lng === 'number')
     .map((item) => ({ ...item, lat: item.location!.lat as number, lng: item.location!.lng as number }));
 
-  const center = points[0] ? { lat: points[0].lat, lng: points[0].lng } : { lat: 3.1390, lng: 101.6869 };
+  const hotspotPoints = hotspots
+    .filter((item) => typeof item.location?.lat === 'number' && typeof item.location?.lng === 'number')
+    .map((item) => ({ ...item, lat: item.location!.lat as number, lng: item.location!.lng as number }));
+
+  const activePoints = mode === 'hotspot' ? hotspotPoints : points;
+  const center = activePoints[0] ? { lat: activePoints[0].lat, lng: activePoints[0].lng } : { lat: 3.1390, lng: 101.6869 };
 
   return (
     <div className="h-[65vh] overflow-hidden rounded-2xl border border-brand-300/80 shadow-[0_14px_34px_rgba(80,55,27,0.2)]">
-      <MapContainer center={center} zoom={points[0] ? 12 : 6} scrollWheelZoom className="h-full w-full">
+      <MapContainer center={center} zoom={activePoints[0] ? 12 : 6} scrollWheelZoom className="h-full w-full">
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        {points.map((item) => (
-          <Marker
-            key={item.id}
-            position={{ lat: item.lat, lng: item.lng }}
-            icon={item.coverPhotoUrl ? buildPhotoMarkerIcon(item.coverPhotoUrl) : defaultMarkerIcon}
-            eventHandlers={{
-              click: () => router.push(`/animal?id=${item.id}`),
-            }}
-          >
-            <Popup>
-              Animal #{item.id}
-              <br />
-              {item.type ?? 'other'}
-            </Popup>
-          </Marker>
-        ))}
+        {mode === 'hotspot'
+          ? hotspotPoints.map((item, index) => (
+              <Marker
+                key={item.id || item.caseId || `hotspot-${index}`}
+                position={{ lat: item.lat, lng: item.lng }}
+                icon={hotspotMarkerIcon}
+                interactive={false}
+              />
+            ))
+          : points.map((item) => (
+              <Marker
+                key={item.id}
+                position={{ lat: item.lat, lng: item.lng }}
+                icon={item.coverPhotoUrl ? buildPhotoMarkerIcon(item.coverPhotoUrl) : defaultMarkerIcon}
+                eventHandlers={{
+                  click: () => router.push(`/animal?id=${item.id}`),
+                }}
+              >
+                <Popup>
+                  Animal #{item.id}
+                  <br />
+                  {item.type ?? 'other'}
+                </Popup>
+              </Marker>
+            ))}
       </MapContainer>
     </div>
   );

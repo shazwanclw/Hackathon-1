@@ -27,3 +27,19 @@
   object-fit: cover;
   display: block;
 }
+
+.hotspot-marker {
+  background: transparent;
+  border: 0;
+}
+
+.hotspot-marker__dot {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: rgba(255, 0, 0, 0.58);
+  box-shadow:
+    0 0 0 5px rgba(255, 0, 0, 0.12),
+    0 0 12px rgba(255, 0, 0, 0.42);
+}
