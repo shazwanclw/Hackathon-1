@@ -8,6 +8,7 @@ import { User } from 'firebase/auth';
 import PublicAccessGuard from '@/components/PublicAccessGuard';
 import UploadDropzone from '@/components/UploadDropzone';
 import { observeAuth } from '@/lib/auth';
+import { reverseGeocode } from '@/lib/geocoding';
 import {
   buildNewCasePayload,
   buildTrackId,
@@ -65,6 +66,7 @@ export default function ReportPage() {
   const [locationMode, setLocationMode] = useState<LocationMode>('auto');
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationMessage, setLocationMessage] = useState('Detecting your current location...');
+  const [locationLabel, setLocationLabel] = useState('');
   const [caption, setCaption] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitState, setSubmitState] = useState<SubmitState>(null);
@@ -83,7 +85,7 @@ export default function ReportPage() {
       setLocationMessage('Detecting your current location...');
       const current = await getCurrentPosition();
       setLocation(current);
-      setLocationMessage('Location detected from your device.');
+      setLocationMessage('');
     } catch {
       setLocationMode('manual');
       setLocationMessage('Auto-detect unavailable. Switched to manual mode. Please place marker on map.');
@@ -96,6 +98,35 @@ export default function ReportPage() {
       detectLocationWithFallback();
     }
   }, [locationMode]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function resolveLabel() {
+      if (!location) {
+        setLocationLabel('');
+        return;
+      }
+
+      setLocationMessage('Looking up location name...');
+      try {
+        const result = await reverseGeocode(location);
+        if (!active) return;
+        setLocationLabel(result.label || `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}`);
+        setLocationMessage('');
+      } catch {
+        if (!active) return;
+        setLocationLabel('');
+        setLocationMessage('Location selected.');
+      }
+    }
+
+    resolveLabel();
+
+    return () => {
+      active = false;
+    };
+  }, [location]);
 
   function handleFileChange(next: File[]) {
     setSubmitState(null);
@@ -206,11 +237,12 @@ export default function ReportPage() {
         location,
       });
 
-      toast.success('Sighting submitted. AI screening will continue in background.');
+      toast.success('Post submitted. AI screening will continue in background.');
       setSubmitState({ ...created, caseId, trackingToken });
       setShowSuccessModal(true);
       setFiles([]);
       setLocation(null);
+      setLocationLabel('');
       setCaption('');
       if (locationMode === 'auto') {
         detectLocationWithFallback();
@@ -226,15 +258,15 @@ export default function ReportPage() {
   return (
     <PublicAccessGuard>
       <section className="mx-auto max-w-2xl space-y-5">
-        <h1 className="page-title">Submit a New Sighting</h1>
-        <p className="page-subtitle">For MVP, each new sighting creates a new animal thread.</p>
+        <h1 className="page-title">Create a New Post</h1>
+        <p className="page-subtitle">For MVP, each new post creates a new animal thread.</p>
 
         {authLoading ? <p className="text-sm text-muted">Checking sign-in status...</p> : null}
 
         {!authLoading && !user ? (
           <div className="card border-honey-300 bg-honey-100/80 p-4 text-sm text-brand-900">
             <p className="font-semibold">Sign-in required</p>
-            <p>Please sign in to create sightings.</p>
+            <p>Please sign in to create posts.</p>
             <Link className="link-inline mt-2 inline-block" href="/auth">
               Go to auth
             </Link>
@@ -244,8 +276,18 @@ export default function ReportPage() {
         <form onSubmit={onSubmit} className="card space-y-4 p-5">
           <UploadDropzone files={files} onFilesChange={handleFileChange} error={fileError} capture="environment" />
 
+          <div>
+            <label className="label">Caption</label>
+            <textarea
+              className="input min-h-24"
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              placeholder="Seen near the bus stop around 7pm."
+            />
+          </div>
+
           <div className="space-y-2">
-            <label className="label">Location mode</label>
+            <label className="label">Post location</label>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -262,43 +304,31 @@ export default function ReportPage() {
                 Manual
               </button>
             </div>
-            <p className="text-xs text-muted">{locationMessage}</p>
-            {location ? <p className="text-xs text-muted">Selected: {location.lat.toFixed(5)}, {location.lng.toFixed(5)}</p> : null}
+            {locationMessage ? <p className="text-xs text-muted">{locationMessage}</p> : null}
+            {locationLabel ? <p className="text-xs text-muted">{locationLabel}</p> : null}
           </div>
 
           {locationMode === 'manual' ? (
             <div>
               <label className="label">Select location on map</label>
               <MapPicker value={location} onChange={setLocation} />
-              <p className="mt-1 text-xs text-muted">Click map to place marker.</p>
+              <p className="mt-1 text-xs text-muted">Search or click map to place marker.</p>
             </div>
           ) : null}
 
-          <div>
-            <label className="label">Caption (optional)</label>
-            <textarea
-              className="input min-h-24"
-              value={caption}
-              onChange={(e) => setCaption(e.target.value)}
-              placeholder="Seen near the bus stop around 7pm."
-            />
+          <div className="pt-1">
+            <button disabled={loading || !user} className="btn-primary" type="submit">
+              {loading ? 'Submitting...' : 'Submit post'}
+            </button>
           </div>
-
-          <button disabled={loading || !user} className="btn-primary" type="submit">
-            {loading ? 'Submitting...' : 'Submit sighting'}
-          </button>
         </form>
       </section>
 
       {showSuccessModal && submitState ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-900/45 p-4">
           <div className="card-elevated w-full max-w-md">
-            <h2 className="font-[var(--font-display)] text-3xl font-semibold text-brand-900">Submission Successful</h2>
-            <p className="mt-2 text-sm text-muted">Your report was submitted. AI screening is running in the background.</p>
-            <div className="mt-3 space-y-1 text-sm text-brand-900">
-              <p>Case ID: {submitState.caseId}</p>
-              <p>Animal ID: {submitState.animalId}</p>
-            </div>
+            <h2 className="font-[var(--font-display)] text-3xl font-semibold text-brand-900">Post Submitted</h2>
+            <p className="mt-2 text-sm text-muted">Your post was submitted. AI screening is running in the background.</p>
             <div className="mt-5 flex gap-2">
               <button className="btn-secondary" type="button" onClick={() => setShowSuccessModal(false)}>
                 OK

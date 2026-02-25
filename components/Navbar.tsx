@@ -39,7 +39,7 @@ export default function Navbar() {
   const links = [{ href: '/', label: 'Home' }];
 
   if (user || guest) {
-    links.push({ href: '/report', label: 'Report' });
+    links.push({ href: '/report', label: 'Post' });
     links.push({ href: '/feed', label: 'Feed' });
     links.push({ href: '/map', label: 'Map' });
   }
