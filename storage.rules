@@ -35,6 +35,14 @@ service firebase.storage {
       allow delete: if isAuthed() && request.auth.uid == uid;
     }
 
+    match /lost_found/{postId}/{fileName} {
+      allow read: if true;
+      allow write: if isAuthed()
+        && request.resource.size < 3 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if isAdmin();
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }

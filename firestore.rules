@@ -104,6 +104,27 @@ service cloud.firestore {
       allow update: if false;
     }
 
+    match /lost_found_posts/{postId} {
+      allow get, list: if true;
+      allow create: if isAuthed()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.authorEmail is string
+        && request.resource.data.petName is string
+        && request.resource.data.description is string
+        && request.resource.data.contactInfo is string
+        && request.resource.data.photoUrl is string;
+      allow update, delete: if isAdmin() || (isAuthed() && resource.data.createdBy == request.auth.uid);
+    }
+
+    match /lost_found_match_history/{historyId} {
+      allow create: if isAuthed()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.animalType is string
+        && request.resource.data.matches is list;
+      allow get, list: if isAuthed() && resource.data.createdBy == request.auth.uid;
+      allow update, delete: if isAdmin() || (isAuthed() && resource.data.createdBy == request.auth.uid);
+    }
+
     match /case_events/{eventId} {
       allow create: if true
         && request.resource.data.caseId is string

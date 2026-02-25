@@ -40,6 +40,15 @@ const CAPTION_SYSTEM_PROMPT =
 const CAPTION_USER_PROMPT =
   'Create one simple caption draft describing what is visible in this image. Keep it neutral and concise (8-18 words).';
 
+const MATCH_SYSTEM_PROMPT =
+  'You are a strict image matching assistant for lost pets. Compare one query pet image against multiple candidate stray images. Return only valid JSON.';
+
+const MATCH_USER_PROMPT =
+  'Compare the query image to each numbered candidate image and estimate whether they are the same pet. ' +
+  'Consider fur color/pattern, body build, face shape, ear/tail characteristics, and visible accessories. ' +
+  'Output JSON only: {"matches":[{"candidateNumber":1,"score":0.0,"reason":"..."}]} where score is 0..1. ' +
+  'Return at most 3 matches with highest confidence and keep reasons short.';
+
 const DISCLAIMER = 'Not a medical diagnosis. For triage only. Requires human verification.';
 const geminiApiKey = defineSecret('GEMINI_API_KEY');
 const allowedAnimalTypes = new Set(['cat', 'dog', 'other', 'unknown']);
@@ -225,6 +234,111 @@ async function callGeminiCaption({ imageBase64, mimeType, apiKey }) {
   return sanitizeCaptionDraft(text);
 }
 
+function parseGeminiMatchJson(rawText, maxCandidateNumber) {
+  let parsed;
+  try {
+    parsed = JSON.parse(rawText);
+  } catch {
+    throw new Error('Gemini match output was not valid JSON.');
+  }
+
+  const items = Array.isArray(parsed?.matches) ? parsed.matches : [];
+  return items
+    .map((item) => {
+      const candidateNumber = Number(item?.candidateNumber);
+      const score = Number(item?.score);
+      const reason = String(item?.reason || '').trim();
+      if (!Number.isFinite(candidateNumber) || candidateNumber < 1 || candidateNumber > maxCandidateNumber) return null;
+      if (!Number.isFinite(score)) return null;
+      return {
+        candidateNumber,
+        score: Math.max(0, Math.min(1, score)),
+        reason,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3);
+}
+
+function normalizeAnimalTypeFilter(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'cat' || normalized === 'dog' || normalized === 'other') return normalized;
+  return 'any';
+}
+
+async function fetchImageAsBase64(url) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Image fetch failed (${response.status})`);
+  }
+  const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+  const mimeType = contentType.startsWith('image/') ? contentType : 'image/jpeg';
+  const arrayBuffer = await response.arrayBuffer();
+  return {
+    mimeType,
+    base64: Buffer.from(arrayBuffer).toString('base64'),
+  };
+}
+
+async function callGeminiLostPetMatch({ queryImageBase64, queryMimeType, candidates, apiKey }) {
+  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  const parts = [
+    { text: MATCH_USER_PROMPT },
+    {
+      text: 'Query image:',
+    },
+    {
+      inline_data: {
+        mime_type: queryMimeType,
+        data: queryImageBase64,
+      },
+    },
+  ];
+
+  candidates.forEach((candidate, index) => {
+    parts.push({
+      text: `Candidate ${index + 1}: animalId=${candidate.id}, type=${candidate.type || 'other'}`,
+    });
+    parts.push({
+      inline_data: {
+        mime_type: candidate.mimeType,
+        data: candidate.imageBase64,
+      },
+    });
+  });
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      system_instruction: {
+        parts: [{ text: MATCH_SYSTEM_PROMPT }],
+      },
+      contents: [{ parts }],
+      generationConfig: {
+        temperature: 0.1,
+        responseMimeType: 'application/json',
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Gemini match API failed (${response.status}): ${errText.slice(0, 300)}`);
+  }
+
+  const body = await response.json();
+  const text = body?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text || typeof text !== 'string') {
+    throw new Error('Gemini match returned empty content.');
+  }
+
+  return parseGeminiMatchJson(text, candidates.length);
+}
+
 exports.generateCaptionDraft = onCall(
   {
     region: 'us-central1',
@@ -263,6 +377,104 @@ exports.generateCaptionDraft = onCall(
       const message = error instanceof Error ? error.message : 'Caption generation failed.';
       logger.error(`Caption generation failed: ${message}`);
       throw new HttpsError('internal', 'Failed to generate caption draft.');
+    }
+  }
+);
+
+exports.findLostPetMatches = onCall(
+  {
+    region: 'us-central1',
+    maxInstances: 10,
+    concurrency: 20,
+    secrets: [geminiApiKey],
+  },
+  async (request) => {
+    if (!request.auth?.uid) {
+      throw new HttpsError('unauthenticated', 'Sign-in required.');
+    }
+
+    const queryImageBase64 = String(request.data?.imageBase64 || '').trim();
+    const queryMimeType = String(request.data?.mimeType || 'image/jpeg').trim().toLowerCase();
+    const animalTypeFilter = normalizeAnimalTypeFilter(request.data?.animalType);
+    if (!queryImageBase64) {
+      throw new HttpsError('invalid-argument', 'imageBase64 is required.');
+    }
+    if (queryImageBase64.length > 6 * 1024 * 1024) {
+      throw new HttpsError('invalid-argument', 'Image payload too large.');
+    }
+
+    const candidateSnap = await db.collection('animals').orderBy('createdAt', 'desc').limit(30).get();
+    let candidates = candidateSnap.docs
+      .map((snap) => {
+        const data = snap.data();
+        return {
+          id: snap.id,
+          type: String(data.type || 'other'),
+          coverPhotoUrl: String(data.coverPhotoUrl || ''),
+          lastSeenLocation: data.lastSeenLocation || null,
+          createdByEmail: String(data.createdByEmail || ''),
+        };
+      })
+      .filter((item) => !!item.coverPhotoUrl);
+
+    if (animalTypeFilter !== 'any') {
+      candidates = candidates.filter((item) => item.type === animalTypeFilter);
+    }
+    candidates = candidates.slice(0, 12);
+
+    const hydratedCandidates = [];
+    for (const candidate of candidates) {
+      try {
+        const fetched = await fetchImageAsBase64(candidate.coverPhotoUrl);
+        hydratedCandidates.push({
+          ...candidate,
+          mimeType: fetched.mimeType,
+          imageBase64: fetched.base64,
+        });
+      } catch (error) {
+        logger.warn(`Skipping candidate ${candidate.id}: ${error instanceof Error ? error.message : 'fetch failed'}`);
+      }
+    }
+
+    if (!hydratedCandidates.length) {
+      return { matches: [] };
+    }
+
+    try {
+      const aiMatches = await callGeminiLostPetMatch({
+        queryImageBase64,
+        queryMimeType,
+        candidates: hydratedCandidates,
+        apiKey: geminiApiKey.value(),
+      });
+
+      const matches = aiMatches
+        .map((item) => {
+          const candidate = hydratedCandidates[item.candidateNumber - 1];
+          if (!candidate) return null;
+          return {
+            animalId: candidate.id,
+            score: item.score,
+            reason: item.reason,
+            type: candidate.type,
+            coverPhotoUrl: candidate.coverPhotoUrl,
+            lastSeenLocation:
+              typeof candidate.lastSeenLocation?.latitude === 'number' && typeof candidate.lastSeenLocation?.longitude === 'number'
+                ? { lat: candidate.lastSeenLocation.latitude, lng: candidate.lastSeenLocation.longitude }
+                : typeof candidate.lastSeenLocation?.lat === 'number' && typeof candidate.lastSeenLocation?.lng === 'number'
+                  ? { lat: candidate.lastSeenLocation.lat, lng: candidate.lastSeenLocation.lng }
+                  : null,
+            reporterEmail: candidate.createdByEmail,
+          };
+        })
+        .filter(Boolean)
+        .slice(0, 3);
+
+      return { matches };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Lost pet match failed.';
+      logger.error(`Lost pet match failed: ${message}`);
+      throw new HttpsError('internal', 'Failed to match against stray database.');
     }
   }
 );

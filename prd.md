@@ -35,6 +35,9 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - Public report flow with image upload (<=3MB), location mode (auto-detect default + manual map fallback), and metadata.
 - Feed includes reporter email and profile link per report card.
 - Profile view lists reports submitted by a given user.
+- Lost & Found owner board for posting missing pet photos + contact info.
+- Lost & Found AI Match (Phase 1 prototype) to retrieve top likely stray matches from existing reports.
+- Saved Match History for owners to revisit previous AI match runs.
 - Server-side Gemini classification mapped to `cat|dog|other`.
 - Server-side Gemini non-diagnostic welfare risk screening.
 - Firestore case lifecycle: `new -> verified -> assigned -> resolved|rejected`.
@@ -57,6 +60,9 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - Public map page `/map` shows all submitted case markers using limited public snapshot fields.
 - Feed page `/feed` shows all reports (not user-scoped), including reporter email + profile link.
 - Profile page `/profile` shows user identity and user-scoped report history.
+- Lost & Found posts page `/lost-found` lists owner posts and includes AI match trigger.
+- Lost & Found create page `/lost-found/new` allows owners to post missing pet details with contact info.
+- Lost & Found AI match page `/lost-found/ai-match` provides matching and saved match history.
 - Submission flow:
   1. Validate fields.
   2. Generate `caseId`.
@@ -127,6 +133,23 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - `authorEmail`: reporter email
 - `type`, `caption`, `photoUrl`, `photoPath`, `location`, `commentCount`, `createdAt`
 
+### Firestore: `lost_found_posts/{postId}`
+- `createdBy`: owner UID
+- `authorEmail`: owner email
+- `petName`: string
+- `description`: string
+- `contactInfo`: string
+- `photoUrl`: string
+- `photoUrls`: string[]
+- `photoPaths`: string[]
+- `createdAt`: serverTimestamp
+
+### Firestore: `lost_found_match_history/{historyId}`
+- `createdBy`: owner UID
+- `animalType`: `"any"|"cat"|"dog"`
+- `matches`: list of `{ animalId, score, reason, type, coverPhotoUrl, lastSeenLocation }`
+- `createdAt`: serverTimestamp
+
 ## 8) Security and Privacy
 - **Chosen approach: Option A-equivalent tokenized tracking snapshot.**
 - Public cannot read/list `cases`.
@@ -136,12 +159,13 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - Admin access requires `/admins/{uid}.enabled == true`.
 - Admins can read/list/update all `cases`, update `public_tracks`, and read/list `case_events`.
 - Storage enforces image content type and 3MB max upload.
+- Lost & Found post creation requires authentication; Lost & Found posts are publicly readable.
 - Minimal PII by design.
 
 ## 9) Architecture
 - Frontend: Next.js 14 App Router, TypeScript, Tailwind.
 - Data/Auth/Storage: Firebase Web SDK v9 modular.
-- AI: Gemini via Firebase Cloud Functions for both classification and non-diagnostic welfare risk screening.
+- AI: Gemini via Firebase Cloud Functions for classification, non-diagnostic welfare risk screening, and Lost & Found Phase 1 visual match ranking.
 - Maps: Leaflet + OpenStreetMap tiles.
 - Deployment: Local development works with Next.js dev server. Public tracking uses a query route (`/track?caseId=...&t=...`) while admin case detail uses dynamic route segments (`/admin/case/[caseId]`).
 

@@ -221,3 +221,32 @@ export interface AnimalSightingItem {
   createdAtLabel: string;
   locationLabel: string;
 }
+
+export interface LostFoundPost {
+  id: string;
+  createdBy: string;
+  authorEmail: string;
+  petName: string;
+  description: string;
+  contactInfo: string;
+  photoUrl: string;
+  photoUrls: string[];
+  createdAtLabel: string;
+}
+
+export interface LostFoundSavedMatch {
+  animalId: string;
+  score: number;
+  reason: string;
+  type: string;
+  coverPhotoUrl: string;
+  lastSeenLocation: { lat: number; lng: number } | null;
+}
+
+export interface LostFoundMatchHistoryItem {
+  id: string;
+  createdBy: string;
+  animalType: 'any' | 'cat' | 'dog';
+  matches: LostFoundSavedMatch[];
+  createdAtLabel: string;
+}

@@ -4,7 +4,9 @@ import 'leaflet/dist/leaflet.css';
 import '@/styles/leaflet.css';
 import L from 'leaflet';
 import { useRouter } from 'next/navigation';
-import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
+import 'leaflet.heat';
+import { useEffect } from 'react';
+import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 
 type MapCase = {
   id: string;
@@ -39,12 +41,32 @@ function buildPhotoMarkerIcon(photoUrl: string) {
   });
 }
 
-const hotspotMarkerIcon = L.divIcon({
-  className: 'hotspot-marker',
-  html: '<span class="hotspot-marker__dot" />',
-  iconSize: [18, 18],
-  iconAnchor: [9, 9],
-});
+function HotspotHeatLayer({ points }: { points: Array<{ lat: number; lng: number }> }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const latLngs: [number, number, number?][] = points.map((point) => [point.lat, point.lng, 0.8]);
+    const heatLayer = (L as any).heatLayer(latLngs, {
+      radius: 32,
+      blur: 20,
+      maxZoom: 17,
+      minOpacity: 0.45,
+      gradient: {
+        0.15: '#fde68a',
+        0.35: '#fb923c',
+        0.55: '#ef4444',
+        0.8: '#dc2626',
+        1.0: '#991b1b',
+      },
+    }).addTo(map);
+
+    return () => {
+      map.removeLayer(heatLayer);
+    };
+  }, [map, points]);
+
+  return null;
+}
 
 export default function MapView({
   cases,
@@ -74,12 +96,18 @@ export default function MapView({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        {mode === 'hotspot' ? <HotspotHeatLayer points={hotspotPoints} /> : null}
         {mode === 'hotspot'
           ? hotspotPoints.map((item, index) => (
               <Marker
-                key={item.id || item.caseId || `hotspot-${index}`}
+                key={item.id || item.caseId || `hotspot-anchor-${index}`}
                 position={{ lat: item.lat, lng: item.lng }}
-                icon={hotspotMarkerIcon}
+                icon={L.divIcon({
+                  className: 'hotspot-anchor-marker',
+                  html: '<span class="hotspot-anchor-marker__dot" />',
+                  iconSize: [8, 8],
+                  iconAnchor: [4, 4],
+                })}
                 interactive={false}
               />
             ))

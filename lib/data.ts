@@ -17,7 +17,7 @@ import {
 } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { db, storage } from './firebase';
-import { AnimalDoc, AnimalMapMarker, AnimalProfile, AnimalSightingDoc, AnimalSightingItem, AnimalType, CaseDoc, CaseEvent, CaseFilters, FeedComment, FeedSighting, PublicMapCase, RiskAnimalType, Urgency, UserProfileDoc, UserProfileSummary } from './types';
+import { AnimalDoc, AnimalMapMarker, AnimalProfile, AnimalSightingDoc, AnimalSightingItem, AnimalType, CaseDoc, CaseEvent, CaseFilters, FeedComment, FeedSighting, LostFoundMatchHistoryItem, LostFoundPost, PublicMapCase, RiskAnimalType, Urgency, UserProfileDoc, UserProfileSummary } from './types';
 
 export function getSessionId() {
   const key = 'straylink_session_id';
@@ -60,6 +60,128 @@ export async function uploadSightingImage(animalId: string, file: File) {
   await uploadBytes(storageRef, file, { contentType: file.type || 'image/jpeg' });
   const downloadUrl = await getDownloadURL(storageRef);
   return { storagePath, downloadUrl };
+}
+
+export async function createLostFoundPostId() {
+  return doc(collection(db, 'lost_found_posts')).id;
+}
+
+export async function uploadLostFoundImage(postId: string, file: File) {
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const storagePath = `lost_found/${postId}/${Date.now()}_${safeName}`;
+  const storageRef = ref(storage, storagePath);
+  await uploadBytes(storageRef, file, { contentType: file.type || 'image/jpeg' });
+  const downloadUrl = await getDownloadURL(storageRef);
+  return { storagePath, downloadUrl };
+}
+
+export async function createLostFoundPost(input: {
+  id: string;
+  createdBy: string;
+  authorEmail: string;
+  petName: string;
+  description: string;
+  contactInfo: string;
+  photoUrls: string[];
+  photoPaths: string[];
+}) {
+  await setDoc(doc(db, 'lost_found_posts', input.id), {
+    createdBy: input.createdBy,
+    authorEmail: input.authorEmail,
+    petName: input.petName,
+    description: input.description,
+    contactInfo: input.contactInfo,
+    photoUrl: input.photoUrls[0] ?? '',
+    photoUrls: input.photoUrls.slice(0, 3),
+    photoPaths: input.photoPaths.slice(0, 3),
+    createdAt: serverTimestamp(),
+  });
+}
+
+export async function listLostFoundPosts(): Promise<LostFoundPost[]> {
+  const snaps = await getDocs(query(collection(db, 'lost_found_posts'), orderBy('createdAt', 'desc'), limit(200)));
+  return snaps.docs.map((snap) => {
+    const data = snap.data() as Record<string, unknown>;
+    const rawCreatedAt = data.createdAt as { toDate?: () => Date } | undefined;
+    const createdAt = typeof rawCreatedAt?.toDate === 'function' ? rawCreatedAt.toDate() : null;
+    const createdAtLabel = createdAt ? createdAt.toLocaleString() : 'Just now';
+    const photoUrls = Array.isArray(data.photoUrls) ? data.photoUrls.map((item) => String(item)).filter(Boolean).slice(0, 3) : [];
+    const fallbackPhoto = String(data.photoUrl ?? '');
+    const normalizedPhotoUrls = photoUrls.length ? photoUrls : fallbackPhoto ? [fallbackPhoto] : [];
+
+    return {
+      id: snap.id,
+      createdBy: String(data.createdBy ?? ''),
+      authorEmail: String(data.authorEmail ?? 'Unknown'),
+      petName: String(data.petName ?? ''),
+      description: String(data.description ?? ''),
+      contactInfo: String(data.contactInfo ?? ''),
+      photoUrl: normalizedPhotoUrls[0] ?? '',
+      photoUrls: normalizedPhotoUrls,
+      createdAtLabel,
+    } as LostFoundPost;
+  });
+}
+
+export async function saveLostFoundMatchHistory(input: {
+  createdBy: string;
+  animalType: 'any' | 'cat' | 'dog';
+  matches: Array<{
+    animalId: string;
+    score: number;
+    reason: string;
+    type: string;
+    coverPhotoUrl: string;
+    lastSeenLocation: { lat: number; lng: number } | null;
+  }>;
+}) {
+  await addDoc(collection(db, 'lost_found_match_history'), {
+    createdBy: input.createdBy,
+    animalType: input.animalType,
+    matches: input.matches.slice(0, 3),
+    createdAt: serverTimestamp(),
+  });
+}
+
+export async function listLostFoundMatchHistory(uid: string): Promise<LostFoundMatchHistoryItem[]> {
+  const snaps = await getDocs(
+    query(collection(db, 'lost_found_match_history'), where('createdBy', '==', uid), orderBy('createdAt', 'desc'), limit(20))
+  );
+
+  return snaps.docs.map((snap) => {
+    const data = snap.data() as Record<string, unknown>;
+    const rawCreatedAt = data.createdAt as { toDate?: () => Date } | undefined;
+    const createdAt = typeof rawCreatedAt?.toDate === 'function' ? rawCreatedAt.toDate() : null;
+    const createdAtLabel = createdAt ? createdAt.toLocaleString() : 'Just now';
+    const rawMatches = Array.isArray(data.matches) ? data.matches : [];
+    const matches = rawMatches
+      .map((item) => {
+        if (!item || typeof item !== 'object') return null;
+        const row = item as Record<string, unknown>;
+        const location = row.lastSeenLocation as { lat?: number; lng?: number } | null | undefined;
+        return {
+          animalId: String(row.animalId ?? ''),
+          score: Number(row.score ?? 0),
+          reason: String(row.reason ?? ''),
+          type: String(row.type ?? 'other'),
+          coverPhotoUrl: String(row.coverPhotoUrl ?? ''),
+          lastSeenLocation:
+            location && typeof location.lat === 'number' && typeof location.lng === 'number'
+              ? { lat: location.lat, lng: location.lng }
+              : null,
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => Boolean(item))
+      .slice(0, 3);
+
+    return {
+      id: snap.id,
+      createdBy: String(data.createdBy ?? ''),
+      animalType: String(data.animalType ?? 'any') as 'any' | 'cat' | 'dog',
+      matches,
+      createdAtLabel,
+    };
+  });
 }
 
 type NewAnimalPayloadInput = {

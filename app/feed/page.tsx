@@ -184,21 +184,23 @@ export default function FeedPage() {
 
   return (
     <PublicAccessGuard>
-      <section className="mx-auto max-w-2xl space-y-4">
+      <section className="mx-auto max-w-6xl space-y-4">
         <h1 className="page-title">Stray Feed</h1>
         <p className="page-subtitle">Latest community sightings, newest first.</p>
 
-        {loading ? <LoadingState text="Loading feed..." /> : null}
-        {!loading && error ? <ErrorState text={error} /> : null}
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <div className="space-y-4">
+            {loading ? <LoadingState text="Loading feed..." /> : null}
+            {!loading && error ? <ErrorState text={error} /> : null}
 
-        {!loading && !error && items.length === 0 ? (
-          <div className="card p-4 text-sm text-muted">No sightings yet.</div>
-        ) : null}
+            {!loading && !error && items.length === 0 ? (
+              <div className="card p-4 text-sm text-muted">No sightings yet.</div>
+            ) : null}
 
-        {!loading && !error
-          ? items.map((item) => (
-              <article key={item.id} className="card overflow-hidden">
-                <div className="space-y-3 p-4 text-sm">
+            {!loading && !error
+              ? items.map((item) => (
+                  <article key={item.id} className="card overflow-hidden">
+                    <div className="space-y-3 p-4 text-sm">
                   <div className="flex items-center gap-3">
                     {item.reporterPhotoURL ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -293,10 +295,27 @@ export default function FeedPage() {
                       )}
                     </div>
                   ) : null}
-                </div>
-              </article>
-            ))
-          : null}
+                    </div>
+                  </article>
+                ))
+              : null}
+          </div>
+
+          <aside className="lg:sticky lg:top-20 lg:self-start">
+            <div className="card-elevated space-y-3 border border-honey-300">
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">Lost & Found</p>
+              <h2 className="font-[var(--font-display)] text-3xl font-semibold text-brand-900">
+                Did you lose your pet?
+              </h2>
+              <p className="text-sm text-brand-900">
+                Post your pet photos and contact details so the community can help bring them home.
+              </p>
+              <Link className="btn-primary w-full justify-center text-center" href="/lost-found">
+                Open Lost & Found
+              </Link>
+            </div>
+          </aside>
+        </div>
       </section>
 
       {activeAiScan ? (

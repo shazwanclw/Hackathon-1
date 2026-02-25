@@ -43,3 +43,17 @@
     0 0 0 5px rgba(255, 0, 0, 0.12),
     0 0 12px rgba(255, 0, 0, 0.42);
 }
+
+.hotspot-anchor-marker {
+  background: transparent;
+  border: 0;
+}
+
+.hotspot-anchor-marker__dot {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: rgba(153, 27, 27, 0.95);
+  box-shadow: 0 0 8px rgba(220, 38, 38, 0.75);
+}

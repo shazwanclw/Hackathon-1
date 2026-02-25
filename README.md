@@ -13,9 +13,21 @@ StrayLink is a free-tier web MVP for reporting stray animals/urban wildlife and 
 - Unified auth (`/auth`): email/password login, registration, Google sign-in, or join as guest
 - Public report flow: photo upload, auto-detect location (default) or manual map pin, optional caption
 - Manual report map picker uses explicit Leaflet marker icons (prevents broken marker image in manual mode)
-- Public map (`/map`) showing all submitted case markers from limited public snapshot data
-- Public feed (`/feed`) showing all submitted reports, including reporter email and clickable reporter profile link
-- User profile (`/profile` or `/profile?uid=<uid>`) showing reporter identity and all reports submitted by that user
+- Public map (`/map`) supports:
+  - normal markers for latest sightings
+  - hotspot heatmap mode for report density
+- Public feed (`/feed`) showing submitted posts with social actions and profile links
+- User profile (`/profile` or `/profile?uid=<uid>`) showing reporter identity and all posts submitted by that user
+- Lost & Found owner board:
+  - browse posts at `/lost-found`
+  - create post at `/lost-found/new` (photo + description + contact)
+  - floating create button in Lost & Found posts page
+- Lost & Found AI Match (Phase 1 prototype):
+  - open AI matcher at `/lost-found/ai-match`
+  - upload one lost pet photo
+  - returns top 3 likely matches from recent stray database entries
+  - includes confidence, reason, and last seen coordinates when available
+  - users can save match results to personal Match History for revisit
 - Gemini classifies animal type (`cat|dog|other`) and runs non-diagnostic welfare risk screening (`aiRisk`) server-side
 - Firestore case lifecycle with event logs
 - Role-based admin access from the same `/auth` flow via `admins` collection gating
@@ -131,7 +143,7 @@ When enabled, static output is generated in `out/`.
 ```bash
 firebase deploy --only hosting
 ```
-To deploy Gemini risk screening trigger:
+To deploy Gemini risk screening trigger and AI match callable:
 ```bash
 firebase deploy --only functions
 ```
@@ -172,6 +184,17 @@ gcloud auth application-default login
   - always `needsHumanVerification=true`
   - disclaimer: `Not a medical diagnosis. For triage only. Requires human verification.`
 - Admins can override `aiRisk` urgency/type; overrides are logged in `case_events` as `ADMIN_OVERRIDE_AI_RISK`.
+
+## Lost & Found AI Match (Phase 1)
+- Callable function: `findLostPetMatches` (authenticated users only).
+- Input: one lost-pet image + optional type filter (`any|cat|dog`).
+- Matching scope: recent stray animal records with available cover photos.
+- Output: top 3 potential matches (`animalId`, score, reason, last seen coordinates if present).
+- Saved history: authenticated users can persist match results in `lost_found_match_history`.
+- Prototype constraints:
+  - heuristic visual matching quality depends on image clarity and angle
+  - not guaranteed identity verification
+  - recommended human confirmation before contacting owner/reporting outcome
 
 ## Notes on free-tier constraints
 - No Cloud Run required.
