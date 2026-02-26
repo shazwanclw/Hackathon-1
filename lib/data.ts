@@ -129,22 +129,24 @@ export async function createLostFoundPost(input: {
   petName: string;
   description: string;
   contactInfo: string;
+  locationText: string;
   photoUrls: string[];
   photoPaths: string[];
 }) {
-  await setDoc(doc(db, 'lost_found_posts', input.id), {
-    createdBy: input.createdBy,
-    authorEmail: input.authorEmail,
-    petName: input.petName,
-    description: input.description,
-    contactInfo: input.contactInfo,
-    photoUrl: input.photoUrls[0] ?? '',
-    photoUrls: input.photoUrls.slice(0, 3),
-    photoPaths: input.photoPaths.slice(0, 3),
-    createdAt: serverTimestamp(),
-  });
+  await setDoc(
+    doc(db, 'lost_found_posts', input.id),
+    buildLostFoundPostPayload({
+      createdBy: input.createdBy,
+      authorEmail: input.authorEmail,
+      petName: input.petName,
+      description: input.description,
+      contactInfo: input.contactInfo,
+      locationText: input.locationText,
+      photoUrls: input.photoUrls,
+      photoPaths: input.photoPaths,
+    })
+  );
 }
-
 export async function listLostFoundPosts(): Promise<LostFoundPost[]> {
   const snaps = await getDocs(query(collection(db, 'lost_found_posts'), orderBy('createdAt', 'desc'), limit(200)));
   return snaps.docs.map((snap) => mapLostFoundDocToPost(snap.id, snap.data() as Record<string, unknown>));
@@ -867,4 +869,5 @@ function extractCreatedAt(data: Record<string, unknown>): Date | null {
 function extractCreatedAtTimestamp(data: Record<string, unknown>): number {
   return extractCreatedAt(data)?.getTime() ?? 0;
 }
+
 
