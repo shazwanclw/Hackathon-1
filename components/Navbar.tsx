@@ -1,5 +1,6 @@
 "use client";
 
+import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -42,6 +43,7 @@ export default function Navbar() {
     links.push({ href: '/report', label: 'Post' });
     links.push({ href: '/map', label: 'Map' });
     links.push({ href: '/feed', label: 'Feed' });
+    links.push({ href: '/adoption', label: 'Adoption' });
   }
   if (user) {
     links.push({ href: '/profile', label: 'Profile' });

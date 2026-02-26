@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import AdminGuard from '@/components/AdminGuard';
 import CaseCard from '@/components/CaseCard';
 import FiltersBar from '@/components/FiltersBar';
@@ -34,7 +35,12 @@ export default function DashboardPage() {
   return (
     <AdminGuard>
       <section className="space-y-4">
-        <h1 className="page-title">Admin Dashboard</h1>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <h1 className="page-title">Admin Dashboard</h1>
+          <Link href="/admin/shelters" className="btn-ghost">
+            Manage Shelters
+          </Link>
+        </div>
         <FiltersBar
           status={filters.status}
           urgency={filters.urgency}

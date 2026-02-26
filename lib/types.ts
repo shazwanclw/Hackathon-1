@@ -1,10 +1,12 @@
 export type CaseStatus = 'new' | 'verified' | 'assigned' | 'resolved' | 'rejected';
 export type AnimalType = 'cat' | 'dog' | 'other';
+export type PetType = 'cat' | 'dog' | 'other';
 export type RiskAnimalType = AnimalType | 'unknown';
 export type Urgency = 'low' | 'medium' | 'high';
 export type CountEstimate = '1' | '2-3' | 'many';
 export type BehaviorType = 'calm' | 'aggressive' | 'unknown';
 export type ResolutionOutcome = 'rescued' | 'treated' | 'relocated' | 'false_report' | 'unknown';
+export type AdoptionStatus = 'available' | 'adopted';
 
 export interface AiRiskSummary {
   animalType: RiskAnimalType;
@@ -252,3 +254,29 @@ export interface LostFoundMatchHistoryItem {
   createdAtLabel: string;
 }
 
+export interface ShelterProfile {
+  uid: string;
+  enabled: boolean;
+  shelterName: string;
+  contactEmail: string;
+  phone: string;
+  address: string;
+}
+
+export interface AdoptionPost {
+  id: string;
+  createdBy: string;
+  createdByEmail: string;
+  shelterUid: string;
+  shelterName: string;
+  petName: string;
+  petType: PetType;
+  ageText: string;
+  description: string;
+  photoUrl: string;
+  contactEmail: string;
+  phone: string;
+  address: string;
+  status: AdoptionStatus;
+  createdAtLabel: string;
+}

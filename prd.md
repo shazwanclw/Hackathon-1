@@ -29,6 +29,12 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - Authenticate via Firebase Auth at `/auth` (Google sign-in or email/password).
 - Access dashboard, case detail, and map.
 - Verify AI tags, triage urgency, assign responders, resolve/reject cases.
+- Manage shelter role assignments via UID at `/admin/shelters`.
+
+### Shelter Operator (login required)
+- Authenticate via Firebase Auth at `/auth`.
+- Access `/adoption` and `/adoption/new` to publish adoptable pets.
+- Maintain shelter contact details used by public adoption contact pages.
 
 ## 5) Goals and Non-Goals
 ### Goals (MVP)
@@ -38,6 +44,7 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - Lost & Found owner board for posting missing pet photos + contact info.
 - Lost & Found AI Match (Phase 1 prototype) to retrieve top likely stray matches from existing reports.
 - Saved Match History for owners to revisit previous AI match runs.
+- Adoption board where public users can browse adoptable pets and contact shelters.
 - Server-side Gemini classification mapped to `cat|dog|other`.
 - Server-side Gemini non-diagnostic welfare risk screening.
 - Firestore case lifecycle: `new -> verified -> assigned -> resolved|rejected`.
@@ -49,7 +56,7 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - No native mobile app.
 - No real-time chat or push notifications.
 - No paid geocoding APIs.
-- No advanced role hierarchy beyond admin membership list.
+- No advanced role hierarchy beyond admin and shelter membership lists.
 
 ## 6) Functional Requirements
 ### Public
@@ -63,6 +70,10 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - Lost & Found posts page `/lost-found` lists owner posts and includes AI match trigger.
 - Lost & Found create page `/lost-found/new` allows owners to post missing pet details with contact info.
 - Lost & Found AI match page `/lost-found/ai-match` provides matching and saved match history.
+- Adoption page `/adoption` lists pets available from shelters.
+- Adoption detail `/adoption/[id]` shows pet profile and contact CTA.
+- Adoption contact page `/adoption/contact/[id]` shows shelter contact details.
+- Adoption create page `/adoption/new` allows post creation only for admin or shelter roles.
 - Submission flow:
   1. Validate fields.
   2. Generate `caseId`.
@@ -80,6 +91,7 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - Case detail `/admin/case/[caseId]` supports verify/assign/resolve/reject with event log.
 - Admin actions also sync `public_tracks` status snapshot.
 - Map page `/admin/map` shows exact markers and filters.
+- Shelter management page `/admin/shelters` allows admins to grant/revoke shelter role access by UID.
 
 ## 7) Data Model
 ### Firestore: `cases/{caseId}`
@@ -123,6 +135,14 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - `enabled`: boolean
 - `createdAt`: timestamp
 
+### Firestore: `shelters/{uid}`
+- `enabled`: boolean
+- `shelterName`: string
+- `contactEmail`: string
+- `phone`: string
+- `address`: string
+- `createdAt`, `updatedAt`: timestamp
+
 ### Firestore: `animals/{animalId}` (public thread source for feed/profile)
 - `createdBy`: reporter UID
 - `createdByEmail`: reporter email (used by feed/profile)
@@ -150,6 +170,23 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - `matches`: list of `{ animalId, score, reason, type, coverPhotoUrl, lastSeenLocation }`
 - `createdAt`: serverTimestamp
 
+### Firestore: `adoption_posts/{postId}`
+- `createdBy`: poster UID
+- `createdByEmail`: poster email
+- `shelterUid`: shelter UID
+- `shelterName`: string
+- `petName`: string
+- `petType`: `"cat"|"dog"|"other"`
+- `ageText`: string
+- `description`: string
+- `photoUrl`: string
+- `photoPath`: string
+- `contactEmail`: string
+- `phone`: string
+- `address`: string
+- `status`: `"available"|"adopted"`
+- `createdAt`: serverTimestamp
+
 ## 8) Security and Privacy
 - **Chosen approach: Option A-equivalent tokenized tracking snapshot.**
 - Public cannot read/list `cases`.
@@ -157,7 +194,9 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - Public map reads are served from `public_map_cases` limited snapshots (no direct public `cases` reads).
 - Public can create `cases`, `public_tracks`, and `case_events` with restricted shape checks.
 - Admin access requires `/admins/{uid}.enabled == true`.
+- Shelter posting access requires `/shelters/{uid}.enabled == true`.
 - Admins can read/list/update all `cases`, update `public_tracks`, and read/list `case_events`.
+- Adoption posts are publicly readable; adoption post writes are restricted to admin/shelter roles.
 - Storage enforces image content type and 3MB max upload.
 - Lost & Found post creation requires authentication; Lost & Found posts are publicly readable.
 - Minimal PII by design.

@@ -11,9 +11,41 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.enabled == true;
     }
 
+    function isShelter() {
+      return isAuthed()
+        && exists(/databases/$(database)/documents/shelters/$(request.auth.uid))
+        && get(/databases/$(database)/documents/shelters/$(request.auth.uid)).data.enabled == true;
+    }
+
     match /admins/{uid} {
       allow read: if isAuthed() && request.auth.uid == uid;
       allow create, update, delete: if false;
+    }
+
+    match /shelters/{uid} {
+      allow get: if isAdmin() || (isAuthed() && request.auth.uid == uid);
+      allow list: if isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /adoption_posts/{postId} {
+      allow get, list: if true;
+      allow create: if (isAdmin() || isShelter())
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdByEmail is string
+        && request.resource.data.shelterUid is string
+        && request.resource.data.shelterName is string
+        && request.resource.data.petName is string
+        && request.resource.data.petType is string
+        && request.resource.data.ageText is string
+        && request.resource.data.description is string
+        && request.resource.data.photoUrl is string
+        && request.resource.data.photoPath is string
+        && request.resource.data.contactEmail is string
+        && request.resource.data.phone is string
+        && request.resource.data.address is string
+        && request.resource.data.status is string;
+      allow update, delete: if isAdmin() || (isShelter() && resource.data.createdBy == request.auth.uid);
     }
 
     match /cases/{caseId} {

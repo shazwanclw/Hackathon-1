@@ -17,7 +17,7 @@ import {
 } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { db, storage } from './firebase';
-import { AnimalDoc, AnimalMapMarker, AnimalProfile, AnimalSightingDoc, AnimalSightingItem, AnimalType, CaseDoc, CaseEvent, CaseFilters, FeedComment, FeedSighting, LostFoundMatchHistoryItem, LostFoundPost, PublicMapCase, RiskAnimalType, Urgency, UserProfileDoc, UserProfileSummary } from './types';
+import { AdoptionPost, AdoptionStatus, AnimalDoc, AnimalMapMarker, AnimalProfile, AnimalSightingDoc, AnimalSightingItem, AnimalType, CaseDoc, CaseEvent, CaseFilters, FeedComment, FeedSighting, LostFoundMatchHistoryItem, LostFoundPost, PetType, PublicMapCase, RiskAnimalType, ShelterProfile, Urgency, UserProfileDoc, UserProfileSummary } from './types';
 
 export function getSessionId() {
   const key = 'straylink_session_id';
@@ -66,9 +66,22 @@ export async function createLostFoundPostId() {
   return doc(collection(db, 'lost_found_posts')).id;
 }
 
+export async function createAdoptionPostId() {
+  return doc(collection(db, 'adoption_posts')).id;
+}
+
 export async function uploadLostFoundImage(postId: string, file: File) {
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
   const storagePath = `lost_found/${postId}/${Date.now()}_${safeName}`;
+  const storageRef = ref(storage, storagePath);
+  await uploadBytes(storageRef, file, { contentType: file.type || 'image/jpeg' });
+  const downloadUrl = await getDownloadURL(storageRef);
+  return { storagePath, downloadUrl };
+}
+
+export async function uploadAdoptionImage(postId: string, file: File) {
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const storagePath = `adoption/${postId}/${Date.now()}_${safeName}`;
   const storageRef = ref(storage, storagePath);
   await uploadBytes(storageRef, file, { contentType: file.type || 'image/jpeg' });
   const downloadUrl = await getDownloadURL(storageRef);
@@ -121,8 +134,7 @@ export function mapLostFoundDocToPost(id: string, data: Record<string, unknown>)
     photoUrls: normalizedPhotoUrls,
     createdAtLabel,
   } as LostFoundPost;
-}
-export async function createLostFoundPost(input: {
+}export async function createLostFoundPost(input: {
   id: string;
   createdBy: string;
   authorEmail: string;
@@ -150,6 +162,150 @@ export async function createLostFoundPost(input: {
 export async function listLostFoundPosts(): Promise<LostFoundPost[]> {
   const snaps = await getDocs(query(collection(db, 'lost_found_posts'), orderBy('createdAt', 'desc'), limit(200)));
   return snaps.docs.map((snap) => mapLostFoundDocToPost(snap.id, snap.data() as Record<string, unknown>));
+}
+
+export async function createAdoptionPost(input: {
+  id: string;
+  createdBy: string;
+  createdByEmail: string;
+  shelterUid: string;
+  shelterName: string;
+  petName: string;
+  petType: PetType;
+  ageText: string;
+  description: string;
+  photoUrl: string;
+  photoPath: string;
+  contactEmail: string;
+  phone: string;
+  address: string;
+  status?: AdoptionStatus;
+}) {
+  await setDoc(doc(db, 'adoption_posts', input.id), {
+    createdBy: input.createdBy,
+    createdByEmail: input.createdByEmail,
+    shelterUid: input.shelterUid,
+    shelterName: input.shelterName,
+    petName: input.petName,
+    petType: input.petType,
+    ageText: input.ageText,
+    description: input.description,
+    photoUrl: input.photoUrl,
+    photoPath: input.photoPath,
+    contactEmail: input.contactEmail,
+    phone: input.phone,
+    address: input.address,
+    status: input.status ?? 'available',
+    createdAt: serverTimestamp(),
+  });
+}
+
+export async function listAdoptionPosts(status: AdoptionStatus | 'all' = 'all'): Promise<AdoptionPost[]> {
+  const snaps = await getDocs(query(collection(db, 'adoption_posts'), orderBy('createdAt', 'desc'), limit(200)));
+  const rows = snaps.docs.map((snap) => {
+    const data = snap.data() as Record<string, unknown>;
+    const rawCreatedAt = data.createdAt as { toDate?: () => Date } | undefined;
+    const createdAt = typeof rawCreatedAt?.toDate === 'function' ? rawCreatedAt.toDate() : null;
+    const createdAtLabel = createdAt ? createdAt.toLocaleString() : 'Just now';
+    return {
+      id: snap.id,
+      createdBy: String(data.createdBy ?? ''),
+      createdByEmail: String(data.createdByEmail ?? ''),
+      shelterUid: String(data.shelterUid ?? ''),
+      shelterName: String(data.shelterName ?? ''),
+      petName: String(data.petName ?? ''),
+      petType: String(data.petType ?? 'other') as PetType,
+      ageText: String(data.ageText ?? ''),
+      description: String(data.description ?? ''),
+      photoUrl: String(data.photoUrl ?? ''),
+      contactEmail: String(data.contactEmail ?? ''),
+      phone: String(data.phone ?? ''),
+      address: String(data.address ?? ''),
+      status: String(data.status ?? 'available') as AdoptionStatus,
+      createdAtLabel,
+    } as AdoptionPost;
+  });
+  return status === 'all' ? rows : rows.filter((row) => row.status === status);
+}
+
+export async function getAdoptionPostById(postId: string): Promise<AdoptionPost | null> {
+  const snap = await getDoc(doc(db, 'adoption_posts', postId));
+  if (!snap.exists()) return null;
+  const data = snap.data() as Record<string, unknown>;
+  const rawCreatedAt = data.createdAt as { toDate?: () => Date } | undefined;
+  const createdAt = typeof rawCreatedAt?.toDate === 'function' ? rawCreatedAt.toDate() : null;
+  const createdAtLabel = createdAt ? createdAt.toLocaleString() : 'Just now';
+  return {
+    id: snap.id,
+    createdBy: String(data.createdBy ?? ''),
+    createdByEmail: String(data.createdByEmail ?? ''),
+    shelterUid: String(data.shelterUid ?? ''),
+    shelterName: String(data.shelterName ?? ''),
+    petName: String(data.petName ?? ''),
+    petType: String(data.petType ?? 'other') as PetType,
+    ageText: String(data.ageText ?? ''),
+    description: String(data.description ?? ''),
+    photoUrl: String(data.photoUrl ?? ''),
+    contactEmail: String(data.contactEmail ?? ''),
+    phone: String(data.phone ?? ''),
+    address: String(data.address ?? ''),
+    status: String(data.status ?? 'available') as AdoptionStatus,
+    createdAtLabel,
+  };
+}
+
+export async function upsertShelterProfile(input: {
+  uid: string;
+  enabled: boolean;
+  shelterName: string;
+  contactEmail: string;
+  phone: string;
+  address: string;
+}) {
+  const refDoc = doc(db, 'shelters', input.uid);
+  const existing = await getDoc(refDoc);
+  await setDoc(
+    refDoc,
+    {
+      enabled: input.enabled,
+      shelterName: input.shelterName,
+      contactEmail: input.contactEmail,
+      phone: input.phone,
+      address: input.address,
+      createdAt: existing.exists() ? existing.data().createdAt : serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
+}
+
+export async function listShelterProfiles(): Promise<ShelterProfile[]> {
+  const snaps = await getDocs(query(collection(db, 'shelters'), orderBy('updatedAt', 'desc'), limit(200)));
+  return snaps.docs.map((snap) => {
+    const data = snap.data() as Record<string, unknown>;
+    return {
+      uid: snap.id,
+      enabled: Boolean(data.enabled),
+      shelterName: String(data.shelterName ?? ''),
+      contactEmail: String(data.contactEmail ?? ''),
+      phone: String(data.phone ?? ''),
+      address: String(data.address ?? ''),
+    };
+  });
+}
+
+export async function getShelterProfileByUid(uid: string): Promise<ShelterProfile | null> {
+  const snap = await getDoc(doc(db, 'shelters', uid));
+  if (!snap.exists()) return null;
+  const data = snap.data() as Record<string, unknown>;
+  return {
+    uid: snap.id,
+    enabled: Boolean(data.enabled),
+    shelterName: String(data.shelterName ?? ''),
+    contactEmail: String(data.contactEmail ?? ''),
+    phone: String(data.phone ?? ''),
+    address: String(data.address ?? ''),
+  };
 }
 
 export async function saveLostFoundMatchHistory(input: {
@@ -869,5 +1025,6 @@ function extractCreatedAt(data: Record<string, unknown>): Date | null {
 function extractCreatedAtTimestamp(data: Record<string, unknown>): number {
   return extractCreatedAt(data)?.getTime() ?? 0;
 }
+
 
 

@@ -35,3 +35,8 @@ export async function isUserAdmin(uid: string) {
   const adminDoc = await getDoc(doc(db, 'admins', uid));
   return adminDoc.exists() && adminDoc.data()?.enabled === true;
 }
+
+export async function isUserShelter(uid: string) {
+  const shelterDoc = await getDoc(doc(db, 'shelters', uid));
+  return shelterDoc.exists() && shelterDoc.data()?.enabled === true;
+}

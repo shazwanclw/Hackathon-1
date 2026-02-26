@@ -5,7 +5,7 @@ import React from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { setGuestAccess } from '@/lib/access';
-import { isUserAdmin, loginWithEmail, loginWithGoogle, registerWithEmail } from '@/lib/auth';
+import { isUserAdmin, isUserShelter, loginWithEmail, loginWithGoogle, registerWithEmail } from '@/lib/auth';
 
 type Mode = 'login' | 'register';
 
@@ -37,7 +37,12 @@ export default function AuthPage() {
   async function routeByRole(uid: string) {
     setGuestAccess(false);
     const admin = await isUserAdmin(uid);
-    router.push(admin ? '/admin/dashboard' : '/report');
+    if (admin) {
+      router.push('/admin/dashboard');
+      return;
+    }
+    const shelter = await isUserShelter(uid);
+    router.push(shelter ? '/adoption' : '/report');
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {

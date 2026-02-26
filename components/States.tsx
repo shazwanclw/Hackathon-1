@@ -1,3 +1,5 @@
+import React from 'react';
+
 export function LoadingState({ text = 'Loading...' }: { text?: string }) {
   return <div className="card p-6 text-sm text-muted">{text}</div>;
 }

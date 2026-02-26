@@ -17,6 +17,11 @@ StrayLink is a free-tier web MVP for reporting stray animals/urban wildlife and 
   - normal markers for latest sightings
   - hotspot heatmap mode for report density
 - Public feed (`/feed`) showing submitted posts with social actions and profile links
+- Public adoption board:
+  - browse adoptable pets at `/adoption`
+  - open pet detail at `/adoption/[id]`
+  - open shelter contact page at `/adoption/contact/[id]`
+  - admin/shelter-only create page at `/adoption/new`
 - User profile (`/profile` or `/profile?uid=<uid>`) showing reporter identity and all posts submitted by that user
 - Lost & Found owner board:
   - browse posts at `/lost-found`
@@ -31,7 +36,9 @@ StrayLink is a free-tier web MVP for reporting stray animals/urban wildlife and 
 - Gemini classifies animal type (`cat|dog|other`) and runs non-diagnostic welfare risk screening (`aiRisk`) server-side
 - Firestore case lifecycle with event logs
 - Role-based admin access from the same `/auth` flow via `admins` collection gating
+- Shelter role access via `shelters/{uid}` documents (`enabled: true`)
 - Admin dashboard, case detail actions, map view
+- Admin shelter-role management page at `/admin/shelters`
 - Public tracking via query route: `/track?caseId=<id>&t=<token>`
 - Cohesive brown/honey visual theme with shared UI primitives and responsive layouts
 
@@ -101,7 +108,8 @@ cd ..
 - Fields:
   - `enabled: true`
   - `createdAt: <timestamp>`
-3. Sign in again via `/auth`; admin users are routed to `/admin/dashboard`, non-admin users to `/report`.
+3. Sign in again via `/auth`; admin users are routed to `/admin/dashboard`, shelter users to `/adoption`, and others to `/report`.
+4. To grant shelter role access, go to `/admin/shelters` as an admin and add the target user's UID with shelter contact profile.
 
 ## Run locally
 ```bash

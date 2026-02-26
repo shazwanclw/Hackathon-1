@@ -2,7 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import AuthPage from './page';
-import { isUserAdmin, loginWithEmail, loginWithGoogle, registerWithEmail } from '@/lib/auth';
+import { isUserAdmin, isUserShelter, loginWithEmail, loginWithGoogle, registerWithEmail } from '@/lib/auth';
 import { setGuestAccess } from '@/lib/access';
 
 const push = vi.fn();
@@ -18,6 +18,7 @@ vi.mock('@/lib/auth', () => ({
   registerWithEmail: vi.fn(),
   loginWithGoogle: vi.fn(),
   isUserAdmin: vi.fn(),
+  isUserShelter: vi.fn(),
 }));
 
 vi.mock('@/lib/access', () => ({
@@ -27,6 +28,7 @@ vi.mock('@/lib/access', () => ({
 describe('Public auth page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(isUserShelter).mockResolvedValue(false);
   });
 
   it('renders login mode by default', () => {
@@ -56,6 +58,7 @@ describe('Public auth page', () => {
   it('logs in with email and password', async () => {
     vi.mocked(loginWithEmail).mockResolvedValue({ user: { uid: 'u-1' } } as never);
     vi.mocked(isUserAdmin).mockResolvedValue(false);
+    vi.mocked(isUserShelter).mockResolvedValue(false);
     render(<AuthPage />);
 
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'user@example.com' } });
@@ -71,6 +74,7 @@ describe('Public auth page', () => {
   it('routes admin account to dashboard after login', async () => {
     vi.mocked(loginWithEmail).mockResolvedValue({ user: { uid: 'admin-1' } } as never);
     vi.mocked(isUserAdmin).mockResolvedValue(true);
+    vi.mocked(isUserShelter).mockResolvedValue(false);
     render(<AuthPage />);
 
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'admin@example.com' } });
@@ -86,6 +90,7 @@ describe('Public auth page', () => {
   it('registers with email and password', async () => {
     vi.mocked(registerWithEmail).mockResolvedValue({ user: { uid: 'u-2' } } as never);
     vi.mocked(isUserAdmin).mockResolvedValue(false);
+    vi.mocked(isUserShelter).mockResolvedValue(false);
     render(<AuthPage />);
 
     fireEvent.click(screen.getByRole('button', { name: /switch to register/i }));
@@ -102,6 +107,7 @@ describe('Public auth page', () => {
   it('allows google sign-in and routes admins to dashboard', async () => {
     vi.mocked(loginWithGoogle).mockResolvedValue({ user: { uid: 'admin-google' } } as never);
     vi.mocked(isUserAdmin).mockResolvedValue(true);
+    vi.mocked(isUserShelter).mockResolvedValue(false);
     render(<AuthPage />);
 
     fireEvent.click(screen.getByRole('button', { name: /continue with google/i }));
@@ -110,6 +116,22 @@ describe('Public auth page', () => {
       expect(loginWithGoogle).toHaveBeenCalledTimes(1);
       expect(isUserAdmin).toHaveBeenCalledWith('admin-google');
       expect(push).toHaveBeenCalledWith('/admin/dashboard');
+    });
+  });
+
+  it('routes shelter account to adoption after login', async () => {
+    vi.mocked(loginWithEmail).mockResolvedValue({ user: { uid: 'shelter-1' } } as never);
+    vi.mocked(isUserAdmin).mockResolvedValue(false);
+    vi.mocked(isUserShelter).mockResolvedValue(true);
+    render(<AuthPage />);
+
+    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'shelter@example.com' } });
+    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'password123' } });
+    fireEvent.click(screen.getByRole('button', { name: /^login$/i }));
+
+    await waitFor(() => {
+      expect(isUserShelter).toHaveBeenCalledWith('shelter-1');
+      expect(push).toHaveBeenCalledWith('/adoption');
     });
   });
 });
