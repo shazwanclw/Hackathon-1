@@ -43,6 +43,7 @@ export default function Navbar() {
     links.push({ href: '/report', label: 'Post' });
     links.push({ href: '/map', label: 'Map' });
     links.push({ href: '/feed', label: 'Feed' });
+    links.push({ href: '/lost-found', label: 'Lost & Found' });
     links.push({ href: '/adoption', label: 'Adoption' });
   }
   if (user) {
@@ -53,12 +54,12 @@ export default function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-30 bg-[rgba(239,226,194,0.94)] backdrop-blur-sm">
-      <div className="container-shell flex min-h-16 items-center justify-between gap-3 py-4">
+    <header className="top-nav">
+      <div className="container-shell flex min-h-[4.6rem] items-center justify-between gap-3 py-3">
         <Link href="/" className="logo-mark">
           StrayLink
         </Link>
-        <nav className="flex flex-wrap items-center justify-end gap-1">
+        <nav className="flex flex-wrap items-center justify-end gap-1.5">
           {links.map((item) => {
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
@@ -91,7 +92,7 @@ export default function Navbar() {
                 setAdmin(false);
                 router.push('/');
               }}
-              className="btn-ghost"
+              className="btn-ghost border-honey-100/30 bg-honey-50/10 text-sm text-honey-50 hover:bg-honey-50/20"
             >
               {user ? 'Logout' : 'Exit Guest'}
             </button>

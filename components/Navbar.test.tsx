@@ -62,4 +62,19 @@ describe('Navbar', () => {
       expect(screen.queryByRole('link', { name: /profile/i })).not.toBeInTheDocument();
     });
   });
+
+  it('uses the styled top navigation shell', async () => {
+    vi.mocked(hasGuestAccess).mockReturnValue(false);
+    vi.mocked(observeAuth).mockImplementation((cb: (user: User | null) => void) => {
+      cb(null);
+      return () => {};
+    });
+
+    render(<Navbar />);
+
+    await waitFor(() => {
+      const banner = screen.getByRole('banner');
+      expect(banner.className).toContain('top-nav');
+    });
+  });
 });

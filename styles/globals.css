@@ -5,6 +5,9 @@
 :root {
   color-scheme: light;
   --ink: #2f2216;
+  --paper: #f3e7cc;
+  --paper-glow: #fff6e4;
+  --nav-dark: #2d1c0f;
 }
 
 * {
@@ -13,7 +16,9 @@
 
 body {
   @apply min-h-screen antialiased;
-  background: #efe2c2;
+  background:
+    radial-gradient(120% 75% at 50% -10%, rgba(255, 247, 228, 0.92) 0%, rgba(255, 247, 228, 0) 55%),
+    linear-gradient(180deg, var(--paper-glow) 0%, var(--paper) 30%, #ecdebd 100%);
   color: var(--ink);
 }
 
@@ -25,20 +30,31 @@ a {
   @apply relative overflow-hidden pb-10;
 }
 
+.app-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(72, 47, 22, 0.05) 0.7px, transparent 0.7px);
+  background-size: 20px 20px;
+  opacity: 0.4;
+}
+
 .container-shell {
   @apply mx-auto max-w-6xl px-4 sm:px-6 lg:px-8;
 }
 
 .logo-mark {
-  @apply font-[var(--font-logo)] text-4xl leading-none text-brand-900;
+  @apply text-4xl leading-none text-honey-50 drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)];
+  font-family: var(--font-logo), cursive;
 }
 
 .page-title {
-  @apply font-[var(--font-display)] text-3xl font-bold tracking-tight text-brand-900 sm:text-4xl;
+  @apply font-[var(--font-display)] text-4xl font-bold tracking-tight text-brand-900 sm:text-5xl;
 }
 
 .page-subtitle {
-  @apply text-sm leading-relaxed text-brand-800/80 sm:text-base;
+  @apply text-base leading-relaxed text-brand-800/85 sm:text-lg;
 }
 
 .text-muted {
@@ -50,15 +66,15 @@ a {
 }
 
 .card {
-  @apply rounded-2xl border border-brand-300/70 bg-[rgba(255,250,239,0.88)] shadow-[0_18px_38px_rgba(111,79,39,0.16)] backdrop-blur-md transition duration-300;
+  @apply rounded-3xl border border-brand-300/75 bg-[rgba(255,251,242,0.92)] shadow-[0_20px_42px_rgba(111,79,39,0.15)] backdrop-blur-md transition duration-300;
 }
 
 .card:hover {
-  @apply border-brand-400/80 shadow-[0_20px_42px_rgba(111,79,39,0.19)];
+  @apply border-brand-400/85 shadow-[0_24px_46px_rgba(111,79,39,0.2)];
 }
 
 .card-elevated {
-  @apply rounded-3xl border border-brand-300/70 bg-[rgba(255,251,242,0.93)] p-6 shadow-[0_25px_55px_rgba(111,79,39,0.2)];
+  @apply rounded-[2rem] border border-brand-300/70 bg-[rgba(255,251,242,0.95)] p-6 shadow-[0_28px_60px_rgba(111,79,39,0.2)];
 }
 
 .hero-shell {
@@ -77,12 +93,16 @@ a {
   @apply relative z-10 p-6 sm:p-10 lg:p-12;
 }
 
+.top-nav {
+  @apply sticky top-0 z-30 border-b border-brand-900/35 bg-[linear-gradient(180deg,rgba(45,28,15,0.98)_0%,rgba(59,39,21,0.95)_100%)] shadow-[0_14px_34px_rgba(23,14,8,0.38)] backdrop-blur-md;
+}
+
 .nav-pill {
-  @apply rounded-full px-5 py-2 text-[1.1rem] font-medium text-brand-900 transition hover:bg-brand-800/15;
+  @apply rounded-full border border-transparent px-5 py-2 text-[1rem] font-semibold text-honey-50/90 transition hover:border-honey-200/25 hover:bg-honey-50/10 hover:text-honey-50;
 }
 
 .nav-pill-active {
-  @apply rounded-full bg-brand-700/55 px-6 py-2 text-[1.1rem] font-semibold text-honey-50 shadow-[0_8px_18px_rgba(58,39,20,0.24)];
+  @apply rounded-full border border-honey-200/30 bg-honey-50/20 px-6 py-2 text-[1rem] font-semibold text-honey-50 shadow-[0_8px_16px_rgba(20,12,7,0.35)];
 }
 
 .pill {
@@ -90,11 +110,11 @@ a {
 }
 
 .input {
-  @apply w-full rounded-xl border border-brand-300 bg-white/85 px-3 py-2.5 text-sm text-brand-900 outline-none transition placeholder:text-brand-700/50 focus:border-brand-500 focus:ring-2 focus:ring-honey-300;
+  @apply w-full rounded-2xl border border-brand-300 bg-white/90 px-4 py-3 text-base text-brand-900 outline-none transition placeholder:text-brand-700/50 focus:border-brand-500 focus:ring-2 focus:ring-honey-300;
 }
 
 .label {
-  @apply mb-1.5 block text-sm font-semibold tracking-wide text-brand-800;
+  @apply mb-2 block text-base font-semibold tracking-wide text-brand-800;
 }
 
 .btn {
@@ -102,15 +122,15 @@ a {
 }
 
 .btn-primary {
-  @apply btn rounded-full border border-brand-700 bg-gradient-to-r from-brand-700 to-brand-600 px-6 text-honey-50 shadow-[0_8px_24px_rgba(80,55,27,0.28)] hover:-translate-y-0.5 hover:from-brand-800 hover:to-brand-700;
+  @apply btn rounded-full border border-brand-700 bg-gradient-to-r from-brand-700 to-brand-600 px-6 py-3 text-base text-honey-50 shadow-[0_10px_24px_rgba(80,55,27,0.28)] hover:-translate-y-0.5 hover:from-brand-800 hover:to-brand-700;
 }
 
 .btn-secondary {
-  @apply btn rounded-full border border-brand-400/70 bg-honey-50 text-brand-800 hover:bg-honey-100;
+  @apply btn rounded-full border border-brand-400/70 bg-honey-50 px-5 py-2.5 text-base text-brand-800 hover:bg-honey-100;
 }
 
 .btn-ghost {
-  @apply btn rounded-full border border-brand-300/70 bg-white/65 text-brand-800 hover:bg-white/85;
+  @apply btn rounded-full border border-brand-300/70 bg-white/70 px-5 py-2.5 text-base text-brand-800 hover:bg-white/90;
 }
 
 .segment {
@@ -119,4 +139,37 @@ a {
 
 .segment-active {
   @apply rounded-full border border-brand-700 bg-brand-700 px-4 py-1.5 text-sm font-semibold text-honey-50 shadow-sm;
+}
+
+.page-pet-bg {
+  position: relative;
+  isolation: isolate;
+}
+
+.page-pet-bg::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  z-index: -1;
+  border-radius: 2rem;
+  border: 1px solid rgba(199, 157, 91, 0.4);
+  background-image:
+    linear-gradient(rgba(255, 248, 232, 0.88), rgba(255, 248, 232, 0.88)),
+    url('/images/StrayLink.jpg');
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 20px 42px rgba(111, 79, 39, 0.14);
+}
+
+.page-pet-bg-fixed {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 248, 232, 0.20), rgba(255, 248, 232, 0.20)),
+    url('/images/StrayLink.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }

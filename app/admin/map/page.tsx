@@ -35,15 +35,28 @@ export default function AdminMapPage() {
 
   return (
     <AdminGuard>
-      <section className="space-y-4">
-        <h1 className="page-title">Admin Map</h1>
-        <FiltersBar
-          status={filters.status}
-          urgency={filters.urgency}
-          animalType={filters.animalType}
-          onChange={(key, value) => setFilters((prev) => ({ ...prev, [key]: value as any }))}
-        />
-        {loading ? <LoadingState text="Loading map points..." /> : <MapView cases={items} />}
+      <section className="space-y-5">
+        <div className="card space-y-4 p-5">
+          <p className="pill">Operations</p>
+          <h1 className="page-title">Admin Map</h1>
+          <p className="page-subtitle">Filter and inspect operational case distribution across the city.</p>
+          <FiltersBar
+            status={filters.status}
+            urgency={filters.urgency}
+            animalType={filters.animalType}
+            onChange={(key, value) => setFilters((prev) => ({ ...prev, [key]: value as any }))}
+          />
+        </div>
+        {loading ? <LoadingState text="Loading map points..." /> : (
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+            <MapView cases={items} />
+            <aside className="card p-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">Filtered result</p>
+              <p className="mt-2 font-[var(--font-display)] text-4xl font-semibold text-brand-900">{items.length}</p>
+              <p className="text-sm text-brand-900">Cases currently matching selected filters.</p>
+            </aside>
+          </div>
+        )}
       </section>
     </AdminGuard>
   );

@@ -7,9 +7,26 @@ import { useSearchParams } from 'next/navigation';
 import PublicAccessGuard from '@/components/PublicAccessGuard';
 import { EmptyState, ErrorState, LoadingState } from '@/components/States';
 import { getAnimalById, listAnimalSightings } from '@/lib/data';
+import { reverseGeocode } from '@/lib/geocoding';
 import { AnimalProfile, AnimalSightingItem } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
+
+function splitIntoSentences(text: string) {
+  return text
+    .split(/(?<=[.!?])\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function parseLatLng(label: string): { lat: number; lng: number } | null {
+  const match = label.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+  if (!match) return null;
+  const lat = Number(match[1]);
+  const lng = Number(match[2]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return { lat, lng };
+}
 
 function AnimalProfilePageContent() {
   const search = useSearchParams();
@@ -19,6 +36,8 @@ function AnimalProfilePageContent() {
   const [error, setError] = useState('');
   const [animal, setAnimal] = useState<AnimalProfile | null>(null);
   const [sightings, setSightings] = useState<AnimalSightingItem[]>([]);
+  const [latestLocationText, setLatestLocationText] = useState('Location unavailable');
+  const [sightingLocationText, setSightingLocationText] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -61,6 +80,72 @@ function AnimalProfilePageContent() {
     };
   }, [animalId]);
 
+  useEffect(() => {
+    const firstLabel = sightings[0]?.locationLabel || '';
+    if (!firstLabel) {
+      setLatestLocationText('Location unavailable');
+      return;
+    }
+
+    const coords = parseLatLng(firstLabel);
+    if (!coords) {
+      setLatestLocationText(firstLabel);
+      return;
+    }
+    const point = coords;
+
+    let cancelled = false;
+    async function resolveText() {
+      try {
+        const result = await reverseGeocode(point);
+        if (!cancelled) {
+          setLatestLocationText(result.label || firstLabel);
+        }
+      } catch {
+        if (!cancelled) {
+          setLatestLocationText(firstLabel);
+        }
+      }
+    }
+    resolveText();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sightings]);
+
+  useEffect(() => {
+    if (!sightings.length) {
+      setSightingLocationText({});
+      return;
+    }
+
+    let cancelled = false;
+    async function resolveSightingLocations() {
+      const entries = await Promise.all(
+        sightings.map(async (item) => {
+          const coords = parseLatLng(item.locationLabel);
+          if (!coords) return [item.id, item.locationLabel] as const;
+          try {
+            const result = await reverseGeocode(coords);
+            return [item.id, result.label || item.locationLabel] as const;
+          } catch {
+            return [item.id, item.locationLabel] as const;
+          }
+        })
+      );
+
+      if (!cancelled) {
+        setSightingLocationText(Object.fromEntries(entries));
+      }
+    }
+
+    resolveSightingLocations();
+    return () => {
+      cancelled = true;
+    };
+  }, [sightings]);
+
   return (
     <PublicAccessGuard>
       {loading ? <LoadingState text="Loading animal profile..." /> : null}
@@ -68,7 +153,7 @@ function AnimalProfilePageContent() {
       {!loading && !error && !animal ? <ErrorState text="Animal not found." /> : null}
 
       {!loading && !error && animal ? (
-        <section className="mx-auto max-w-3xl space-y-4">
+        <section className="mx-auto max-w-4xl space-y-5">
           <h1 className="page-title">Animal Profile</h1>
 
           <article className="card overflow-hidden">
@@ -76,19 +161,50 @@ function AnimalProfilePageContent() {
               // eslint-disable-next-line @next/next/no-img-element
               <img src={animal.coverPhotoUrl} alt={`${animal.type} cover`} className="h-72 w-full object-cover" />
             ) : null}
-            <div className="space-y-1 p-4 text-sm">
-              <p className="capitalize text-brand-900">Type: {animal.type}</p>
-              <p className="text-muted">Last seen: {animal.lastSeenAtLabel}</p>
-              <p className="text-muted">Total sightings: {animal.sightingCount}</p>
+            <div className="space-y-4 p-5 text-sm">
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-2xl border border-brand-500/40 bg-[linear-gradient(145deg,rgba(106,73,37,0.86),rgba(139,96,50,0.84))] p-4 text-honey-50 shadow-[0_12px_28px_rgba(56,36,17,0.25)]">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-honey-100/95">Location Information</p>
+                  <p className="mt-1 text-sm font-semibold text-honey-50">Latest Location</p>
+                  <p className="text-sm leading-relaxed text-honey-50">{latestLocationText}</p>
+                </div>
+                <div className="rounded-2xl border border-brand-500/40 bg-[linear-gradient(145deg,rgba(106,73,37,0.86),rgba(139,96,50,0.84))] p-4 text-honey-50 shadow-[0_12px_28px_rgba(56,36,17,0.25)]">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-honey-100/95">Info</p>
+                  <div className="mt-1 space-y-1 text-sm leading-relaxed">
+                    <p className="capitalize">Type: {animal.type}</p>
+                    <p><span className="font-semibold text-honey-100">Last seen:</span> {animal.lastSeenAtLabel}</p>
+                    <p><span className="font-semibold text-honey-100">Total sightings:</span> {animal.sightingCount}</p>
+                  </div>
+                </div>
+              </div>
               {animal.aiRisk ? (
-                <div className="mt-3 rounded-xl border border-brand-300 bg-brand-100/55 p-3">
-                  <p className="font-semibold text-brand-900">AI welfare risk screening (not diagnosis)</p>
-                  <p className="capitalize text-brand-900">Urgency: {animal.aiRisk.urgency}</p>
-                  <p className="text-brand-900">Reason: {animal.aiRisk.reason}</p>
-                  <p className="text-brand-900">Visible indicators: {animal.aiRisk.visibleIndicators.join(', ') || 'none'}</p>
-                  <p className="text-brand-900">Confidence: {animal.aiRisk.confidence}</p>
-                  <p className="text-xs text-muted">{animal.aiRisk.disclaimer}</p>
-                  <p className="text-xs text-brand-800/70">Generated: {animal.aiRisk.createdAtLabel}</p>
+                <div className="rounded-2xl border border-brand-300 bg-brand-100/55 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-[var(--font-display)] text-3xl font-semibold text-brand-900">AI welfare risk screening</p>
+                    <span className="rounded-full border border-brand-400/70 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-800">
+                      Urgency: {animal.aiRisk.urgency}
+                    </span>
+                  </div>
+                  {animal.aiRisk.reason ? (
+                    <div className="mt-3 space-y-1 rounded-xl border border-brand-200/80 bg-white/75 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">AI Notes</p>
+                      {splitIntoSentences(animal.aiRisk.reason).map((line, idx) => (
+                        <p key={`${line}-${idx}`} className="text-sm text-brand-900">
+                          {line}
+                        </p>
+                      ))}
+                    </div>
+                  ) : null}
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <div className="rounded-xl border border-brand-200/80 bg-white/75 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">AI Accuracy Level</p>
+                      <p className="text-lg font-semibold text-brand-900">{Math.round((animal.aiRisk.confidence || 0) * 100)}%</p>
+                    </div>
+                    <div className="rounded-xl border border-brand-200/80 bg-white/75 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">Visible indicators</p>
+                      <p className="text-sm text-brand-900">{animal.aiRisk.visibleIndicators.join(', ') || 'none'}</p>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <p className="text-xs text-brand-800/70">AI welfare screening not available yet.</p>
@@ -99,19 +215,25 @@ function AnimalProfilePageContent() {
           <section className="space-y-3">
             <h2 className="font-[var(--font-display)] text-2xl font-semibold text-brand-900">Sightings Timeline</h2>
             {sightings.length === 0 ? <EmptyState text="No sightings found for this animal." /> : null}
-            {sightings.map((item) => (
-              <article key={item.id} className="card overflow-hidden">
-                {item.photoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.photoUrl} alt="Sighting" className="h-64 w-full object-cover" />
-                ) : null}
-                <div className="space-y-1 p-4 text-sm">
-                  <p className="text-brand-900">{item.caption || 'No caption provided.'}</p>
-                  <p className="text-xs text-brand-800/70">{item.createdAtLabel}</p>
-                  <p className="text-xs text-muted">Location: {item.locationLabel}</p>
-                </div>
-              </article>
-            ))}
+            <div className="grid gap-3">
+              {sightings.map((item) => (
+                <article key={item.id} className="card border border-brand-300/70 p-3">
+                  <div className="grid gap-3 sm:grid-cols-[7rem_minmax(0,1fr)] sm:items-start">
+                    {item.photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={item.photoUrl} alt="Sighting" className="h-28 w-full rounded-xl object-cover sm:w-28" />
+                    ) : null}
+                    <div className="space-y-2 text-sm">
+                      <p className="text-brand-900">{item.caption || 'No caption provided.'}</p>
+                      <div className="rounded-lg border border-brand-200/80 bg-white/70 p-2">
+                        <p className="text-xs text-brand-800/70">{item.createdAtLabel}</p>
+                        <p className="text-xs text-muted">Location: {sightingLocationText[item.id] || item.locationLabel}</p>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
           </section>
         </section>
       ) : null}

@@ -57,22 +57,22 @@ export default function HomePage() {
   }, [user, guest]);
 
   return (
-    <div className="space-y-8 py-2">
+    <div className="space-y-10 py-2">
       <section>
         <div data-testid="home-hero" className="hero-shell min-h-[72vh]">
           <Image src="/images/hero-cat.jpeg" alt="" fill priority className="hero-image" />
           <div className="hero-tint" />
           <div className="hero-content flex min-h-[72vh] items-end lg:items-center">
-            <div className="ml-auto w-full max-w-[42rem] text-white">
-              <h1 className="font-[var(--font-body)] text-5xl font-extrabold leading-[1.03] drop-shadow-sm sm:text-6xl">
+            <div className="ml-auto w-full max-w-[43rem] text-white">
+              <h1 className="font-[var(--font-body)] text-5xl font-extrabold leading-[1.04] drop-shadow-sm sm:text-6xl">
                 Report stray animals quickly. Help responders act faster.
               </h1>
-              <p className="mt-5 max-w-[40rem] text-xl leading-tight text-honey-50/95">
+              <p className="mt-5 max-w-[40rem] text-xl leading-snug text-honey-50/95">
                 StrayLink helps communities submit geotagged reports so NGOs and responders can triage cases fast.
               </p>
               {!user && !guest ? (
                 <div className="mt-8 flex justify-end">
-                  <Link href="/auth" className="btn-primary text-3xl leading-none sm:text-[2rem]">
+                  <Link href="/auth" className="btn-primary text-xl leading-none sm:text-2xl">
                     Login / Join
                   </Link>
                 </div>
@@ -83,7 +83,7 @@ export default function HomePage() {
       </section>
 
       {user || guest ? (
-        <section className="card-elevated grid gap-6 p-6 lg:grid-cols-[1.1fr_1fr]">
+        <section className="card-elevated grid gap-8 p-7 lg:grid-cols-[1.1fr_1fr]">
           <div>
             <h2 className="font-[var(--font-display)] text-5xl font-semibold text-brand-900">How it Works?</h2>
             <div className="mt-5 space-y-4">
@@ -93,7 +93,7 @@ export default function HomePage() {
                 'Help the Community!',
               ].map((step, index) => (
                 <div key={step} className="flex items-center gap-3 text-brand-900">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-900 text-lg font-semibold text-honey-50">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-900 text-lg font-semibold text-honey-50 shadow-[0_6px_12px_rgba(52,35,17,0.3)]">
                     {index + 1}
                   </div>
                   <p className="text-2xl font-medium leading-tight">{step}</p>

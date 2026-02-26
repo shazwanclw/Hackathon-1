@@ -276,9 +276,12 @@ export default function ReportPage() {
 
   return (
     <PublicAccessGuard>
-      <section className="mx-auto max-w-2xl space-y-5">
-        <h1 className="page-title">Create a New Post</h1>
-        <p className="page-subtitle">For MVP, each new post creates a new animal thread.</p>
+      <div className="page-pet-bg-fixed" aria-hidden />
+      <section className="relative z-10 mx-auto max-w-3xl space-y-6">
+        <div className="card-elevated p-6 sm:p-8">
+          <h1 className="page-title">Create a New Post</h1>
+          <p className="page-subtitle mt-2 max-w-3xl">Each post saves a stray’s latest location and helps shelters and nearby people find, feed, and rescue animals faster.</p>
+        </div>
 
         {authLoading ? <p className="text-sm text-muted">Checking sign-in status...</p> : null}
 
@@ -292,55 +295,61 @@ export default function ReportPage() {
           </div>
         ) : null}
 
-        <form onSubmit={onSubmit} className="card space-y-4 p-5">
-          <UploadDropzone files={files} onFilesChange={handleFileChange} error={fileError} capture="environment" />
-
-          <div>
-            <label className="label">Caption</label>
-            <textarea
-              className="input min-h-24"
-              value={caption}
-              onChange={(e) => setCaption(e.target.value)}
-              placeholder="Seen near the bus stop around 7pm."
-            />
-            {captionDraftLoading ? <p className="mt-1 text-xs text-muted">Generating caption draft...</p> : null}
-          </div>
-
-          <div className="space-y-2">
-            <label className="label">Post location</label>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                className={locationMode === 'auto' ? 'segment-active' : 'segment'}
-                onClick={() => setLocationMode('auto')}
-              >
-                Auto detect
-              </button>
-              <button
-                type="button"
-                className={locationMode === 'manual' ? 'segment-active' : 'segment'}
-                onClick={() => setLocationMode('manual')}
-              >
-                Manual
-              </button>
+        <form onSubmit={onSubmit} className="card-elevated space-y-5 p-6">
+            <div className="space-y-2">
+              <p className="pill">Step 1</p>
+              <h2 className="font-[var(--font-display)] text-3xl font-semibold text-brand-900">Add clear photos</h2>
+              <UploadDropzone files={files} onFilesChange={handleFileChange} error={fileError} capture="environment" />
             </div>
-            {locationMessage ? <p className="text-xs text-muted">{locationMessage}</p> : null}
-            {locationLabel ? <p className="text-xs text-muted">{locationLabel}</p> : null}
-          </div>
 
-          {locationMode === 'manual' ? (
             <div>
-              <label className="label">Select location on map</label>
-              <MapPicker value={location} onChange={setLocation} />
-              <p className="mt-1 text-xs text-muted">Search or click map to place marker.</p>
+              <p className="pill mb-2">Step 2</p>
+              <label className="label">Caption</label>
+              <textarea
+                className="input min-h-28"
+                value={caption}
+                onChange={(e) => setCaption(e.target.value)}
+                placeholder="Seen near the bus stop around 7pm."
+              />
+              {captionDraftLoading ? <p className="mt-1 text-xs text-muted">Generating caption draft...</p> : null}
             </div>
-          ) : null}
 
-          <div className="pt-1">
-            <button disabled={loading || !user} className="btn-primary" type="submit">
-              {loading ? 'Submitting...' : 'Submit post'}
-            </button>
-          </div>
+            <div className="space-y-2 rounded-2xl border border-brand-300/70 bg-white/65 p-4">
+              <p className="pill mb-2">Step 3</p>
+              <label className="label">Post location</label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className={locationMode === 'auto' ? 'segment-active' : 'segment'}
+                  onClick={() => setLocationMode('auto')}
+                >
+                  Auto detect
+                </button>
+                <button
+                  type="button"
+                  className={locationMode === 'manual' ? 'segment-active' : 'segment'}
+                  onClick={() => setLocationMode('manual')}
+                >
+                  Manual
+                </button>
+              </div>
+              {locationMessage ? <p className="text-xs text-muted">{locationMessage}</p> : null}
+              {locationLabel ? <p className="text-xs text-muted">{locationLabel}</p> : null}
+            </div>
+
+            {locationMode === 'manual' ? (
+              <div>
+                <label className="label">Select location on map</label>
+                <MapPicker value={location} onChange={setLocation} />
+                <p className="mt-1 text-xs text-muted">Search or click map to place marker.</p>
+              </div>
+            ) : null}
+
+            <div className="pt-1">
+              <button disabled={loading || !user} className="btn-primary min-w-40" type="submit">
+                {loading ? 'Submitting...' : 'Submit post'}
+              </button>
+            </div>
         </form>
       </section>
 

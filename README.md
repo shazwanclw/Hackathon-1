@@ -17,6 +17,7 @@ StrayLink is a free-tier web MVP for reporting stray animals/urban wildlife and 
   - normal markers for latest sightings
   - hotspot heatmap mode for report density
 - Public feed (`/feed`) showing submitted posts with social actions and profile links
+- Public feed (`/feed`) showing submitted posts with social actions, reporter identity (username/avatar), and profile links
 - Public adoption board:
   - browse adoptable pets at `/adoption`
   - open pet detail at `/adoption/[id]`
@@ -41,6 +42,7 @@ StrayLink is a free-tier web MVP for reporting stray animals/urban wildlife and 
 - Admin shelter-role management page at `/admin/shelters`
 - Public tracking via query route: `/track?caseId=<id>&t=<token>`
 - Cohesive brown/honey visual theme with shared UI primitives and responsive layouts
+- Route-level pet-themed background image on Feed and Report pages (`/images/StrayLink.jpg`)
 
 ## Project Structure
 - `app/` routes (public + admin)
@@ -61,6 +63,7 @@ StrayLink is a free-tier web MVP for reporting stray animals/urban wildlife and 
 - Typography:
   - Display: `Cormorant Garamond`
   - Body: `Manrope`
+  - Brand logo wordmark: `Lobster Two`
 - When adding new pages/components:
   - Prefer shared primitives before creating one-off classes
   - Reuse tokenized colors (`brand.*`, `honey.*`) instead of new hardcoded colors
@@ -191,6 +194,7 @@ gcloud auth application-default login
   - urgency suggestion (`high|medium|low`)
   - always `needsHumanVerification=true`
   - disclaimer: `Not a medical diagnosis. For triage only. Requires human verification.`
+- Public UI surfaces present AI details in a cleaner, readability-first format (for example `AI Accuracy Level` and `Visible indicators` cards) while backend safety fields remain preserved in data.
 - Admins can override `aiRisk` urgency/type; overrides are logged in `case_events` as `ADMIN_OVERRIDE_AI_RISK`.
 
 ## Lost & Found AI Match (Phase 1)

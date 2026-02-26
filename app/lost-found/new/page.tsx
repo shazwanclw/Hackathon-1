@@ -141,63 +141,88 @@ export default function LostFoundCreatePage() {
 
   return (
     <PublicAccessGuard>
-      <section className="mx-auto max-w-2xl space-y-4">
-        <h1 className="page-title">Create Lost Pet Post</h1>
-        <p className="page-subtitle">Share pet photos and contact details so people can reach you quickly.</p>
+      <section className="mx-auto max-w-6xl space-y-6">
+        <div className="card-elevated p-6 sm:p-8">
+          <p className="pill">Owner report</p>
+          <h1 className="page-title mt-3">Create Lost Pet Post</h1>
+          <p className="page-subtitle mt-2">Share pet photos and contact details so people can reach you quickly.</p>
+        </div>
 
-        <form onSubmit={onSubmit} className="card space-y-3 p-4">
-          {authLoading ? <p className="text-xs text-muted">Checking sign-in status...</p> : null}
-          {!authLoading && !user ? (
-            <p className="text-xs text-muted">
-              Please <Link href="/auth" className="link-inline">sign in</Link> to create a lost pet post.
-            </p>
-          ) : null}
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <form onSubmit={onSubmit} className="card-elevated space-y-4 p-6">
+            {authLoading ? <p className="text-xs text-muted">Checking sign-in status...</p> : null}
+            {!authLoading && !user ? (
+              <p className="text-xs text-muted">
+                Please <Link href="/auth" className="link-inline">sign in</Link> to create a lost pet post.
+              </p>
+            ) : null}
 
-          <UploadDropzone files={files} onFilesChange={onFilesChange} error={fileError} />
+            <div className="space-y-2">
+              <p className="pill">Step 1</p>
+              <h2 className="font-[var(--font-display)] text-3xl font-semibold text-brand-900">Upload pet photos</h2>
+              <UploadDropzone files={files} onFilesChange={onFilesChange} error={fileError} />
+            </div>
 
-          <div>
-            <label className="label">Pet name</label>
-            <input className="input" value={petName} onChange={(event) => setPetName(event.target.value)} placeholder="Milo" />
-          </div>
-          <div>
-            <label className="label">Description</label>
-            <textarea
-              className="input min-h-24"
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              placeholder="Color, collar, where last seen, special traits."
-            />
-          </div>
-          <div>
-            <label className="label">Contact information</label>
-            <input
-              className="input"
-              value={contactInfo}
-              onChange={(event) => setContactInfo(event.target.value)}
-              placeholder="Phone, WhatsApp, or email"
-            />
-          </div>
+            <div className="space-y-3 rounded-2xl border border-brand-300/70 bg-white/70 p-4">
+              <p className="pill">Step 2</p>
+              <div>
+                <label className="label">Pet name</label>
+                <input className="input" value={petName} onChange={(event) => setPetName(event.target.value)} placeholder="Milo" />
+              </div>
+              <div>
+                <label className="label">Description</label>
+                <textarea
+                  className="input min-h-24"
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  placeholder="Color, collar, where last seen, special traits."
+                />
+              </div>
+              <div>
+                <label className="label">Contact information</label>
+                <input
+                  className="input"
+                  value={contactInfo}
+                  onChange={(event) => setContactInfo(event.target.value)}
+                  placeholder="Phone, WhatsApp, or email"
+                />
+              </div>
+            </div>
 
-          <div className="space-y-2">
-            <label className="label">Last seen location</label>
-            {locationMessage ? <p className="text-xs text-muted">{locationMessage}</p> : null}
-            {locationLabel ? <p className="text-xs text-muted">{locationLabel}</p> : null}
-          </div>
-          <div>
-            <label className="label">Select location on map</label>
-            <MapPicker value={location} onChange={setLocation} />
-            <p className="mt-1 text-xs text-muted">Search or click map to place marker.</p>
-          </div>
+            <div className="space-y-2">
+              <p className="pill">Step 3</p>
+              <label className="label">Last seen location</label>
+              {locationMessage ? <p className="text-xs text-muted">{locationMessage}</p> : null}
+              {locationLabel ? <p className="text-xs text-muted">{locationLabel}</p> : null}
+            </div>
+            <div>
+              <label className="label">Select location on map</label>
+              <MapPicker value={location} onChange={setLocation} />
+              <p className="mt-1 text-xs text-muted">Search or click map to place marker.</p>
+            </div>
 
-          <div className="flex gap-2">
-            <button className="btn-primary" type="submit" disabled={submitting || !user}>
-              {submitting ? 'Posting...' : 'Post Lost Pet'}
-            </button>
-            <Link className="btn-ghost" href="/lost-found">
-              Back to posts
-            </Link>
-          </div>
-        </form>
+            <div className="flex gap-2">
+              <button className="btn-primary" type="submit" disabled={submitting || !user}>
+                {submitting ? 'Posting...' : 'Post Lost Pet'}
+              </button>
+              <Link className="btn-ghost" href="/lost-found">
+                Back to posts
+              </Link>
+            </div>
+          </form>
+
+          <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+            <div className="card p-5">
+              <p className="pill mb-2">Checklist</p>
+              <h3 className="font-[var(--font-display)] text-3xl font-semibold text-brand-900">Before posting</h3>
+              <ul className="mt-3 space-y-2 text-sm text-brand-900">
+                <li>Upload recent clear images of your pet.</li>
+                <li>Add distinctive details like collar color or markings.</li>
+                <li>Provide contact details you actively monitor.</li>
+              </ul>
+            </div>
+          </aside>
+        </div>
       </section>
     </PublicAccessGuard>
   );

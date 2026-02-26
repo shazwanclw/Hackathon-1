@@ -42,33 +42,40 @@ export default function PublicMapPage() {
 
   return (
     <PublicAccessGuard>
-      <section className="space-y-4">
-        <h1 className="page-title">Community Map</h1>
-        <p className="page-subtitle">
-          {mapMode === 'normal'
-            ? 'One marker per animal thread at its latest known location.'
-            : 'Hotspot view shows density of all reported stray locations.'}
-        </p>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            className={mapMode === 'normal' ? 'segment-active' : 'segment'}
-            onClick={() => setMapMode('normal')}
-          >
-            Normal map
-          </button>
-          <button
-            type="button"
-            className={mapMode === 'hotspot' ? 'segment-active' : 'segment'}
-            onClick={() => setMapMode('hotspot')}
-          >
-            Hotspot map
-          </button>
+      <section className="space-y-5">
+        <div className="card-elevated space-y-4 p-6 sm:p-8">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="page-title">Community Map</h1>
+            <p className="pill">Public live view</p>
+          </div>
+          <p className="page-subtitle">
+            {mapMode === 'normal'
+              ? 'Use this map to view animals near your area. Click a marker to open the animal profile.'
+              : 'Switch to hotspot mode to see dense report areas and prioritize where attention is needed.'}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className={mapMode === 'normal' ? 'segment-active' : 'segment'}
+              onClick={() => setMapMode('normal')}
+            >
+              Normal map
+            </button>
+            <button
+              type="button"
+              className={mapMode === 'hotspot' ? 'segment-active' : 'segment'}
+              onClick={() => setMapMode('hotspot')}
+            >
+              Hotspot map
+            </button>
+          </div>
         </div>
         {loading ? <LoadingState text="Loading map points..." /> : null}
         {!loading && error ? <ErrorState text={error} /> : null}
         {!loading && !error ? (
-          <MapView cases={items} mode={mapMode} hotspots={hotspotItems} />
+          <div className="mx-auto max-w-5xl">
+            <MapView cases={items} mode={mapMode} hotspots={hotspotItems} />
+          </div>
         ) : null}
       </section>
     </PublicAccessGuard>

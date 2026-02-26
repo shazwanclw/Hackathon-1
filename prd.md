@@ -39,7 +39,7 @@ StrayLink contributes to safer, healthier neighborhoods by:
 ## 5) Goals and Non-Goals
 ### Goals (MVP)
 - Public report flow with image upload (<=3MB), location mode (auto-detect default + manual map fallback), and metadata.
-- Feed includes reporter email and profile link per report card.
+- Feed includes reporter identity (username/avatar) and profile link per report card.
 - Profile view lists reports submitted by a given user.
 - Lost & Found owner board for posting missing pet photos + contact info + last seen location.
 - Lost & Found AI Match (Phase 1 prototype) to retrieve top likely stray matches from existing reports.
@@ -65,7 +65,7 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - Report page `/report` supports photo upload, auto location (default) or manual map pin, and note.
 - Manual map marker uses explicit Leaflet icon URLs to avoid broken default marker assets in Next.js.
 - Public map page `/map` shows all submitted case markers using limited public snapshot fields.
-- Feed page `/feed` shows all reports (not user-scoped), including reporter email + profile link.
+- Feed page `/feed` shows all reports (not user-scoped), including reporter identity + profile link.
 - Profile page `/profile` shows user identity and user-scoped report history.
 - Lost & Found posts page `/lost-found` lists owner posts and includes AI match trigger.
 - Lost & Found create page `/lost-found/new` allows owners to post missing pet details with contact info and last seen location (map pin -> text).
@@ -225,6 +225,7 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - Typography:
   - Display/headings: `Cormorant Garamond`.
   - Body/UI text: `Manrope`.
+  - Brand wordmark/logo: `Lobster Two`.
 - Styling guardrails:
   - Use shared classes from `styles/globals.css` (`card`, `card-elevated`, `btn-primary`, `btn-secondary`, `btn-ghost`, `segment`, `segment-active`, `input`, `label`).
   - Prefer design tokens from `tailwind.config.js` (`brand.*`, `honey.*`) over ad-hoc hex colors.
@@ -232,6 +233,10 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - Motion and interaction:
   - Subtle hover/focus transitions only; no distracting continuous animations.
   - Strong focus rings on all interactive controls for accessibility.
+- Route-level visuals:
+  - Feed (`/feed`) and Report (`/report`) use the pet-themed full-page static background image (`/images/StrayLink.jpg`).
+- AI presentation:
+  - Public-facing AI cards/modals prioritize readability with sentence-broken notes and compact labels (`AI Accuracy Level`, `Visible indicators`) rather than dense raw blocks.
 - Accessibility baseline:
   - Maintain WCAG-friendly contrast for text and controls.
   - Preserve semantic headings/labels and keyboard accessibility.

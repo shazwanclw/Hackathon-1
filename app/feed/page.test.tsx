@@ -128,9 +128,9 @@ describe('Feed page', () => {
     await waitFor(() => {
       expect(getAnimalById).toHaveBeenCalledWith('a1');
       expect(screen.getByText(/ai welfare risk screening/i)).toBeInTheDocument();
-      expect(screen.getByText(/visible indicators:/i)).toBeInTheDocument();
-      expect(screen.getByText(/confidence:/i)).toBeInTheDocument();
-      expect(screen.getByText(/generated:/i)).toBeInTheDocument();
+      expect(screen.getByText(/visible indicators/i)).toBeInTheDocument();
+      expect(screen.getByText(/ai accuracy level/i)).toBeInTheDocument();
+      expect(screen.getByText(/ai notes/i)).toBeInTheDocument();
     });
     fireEvent.click(screen.getByRole('button', { name: /close/i }));
 

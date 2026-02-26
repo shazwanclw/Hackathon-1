@@ -79,8 +79,10 @@ describe('Profile page', () => {
       expect(screen.getByRole('heading', { name: /user profile/i })).toBeInTheDocument();
       expect(screen.getByText(/zaidi/i)).toBeInTheDocument();
       expect(screen.getByText(/user-1@gmail.com/i)).toBeInTheDocument();
-      expect(screen.getByText(/followers: 9/i)).toBeInTheDocument();
-      expect(screen.getByText(/following: 2/i)).toBeInTheDocument();
+      expect(screen.getByText(/^followers$/i)).toBeInTheDocument();
+      expect(screen.getByText(/^following$/i)).toBeInTheDocument();
+      expect(screen.getByText(/^9$/)).toBeInTheDocument();
+      expect(screen.getByText(/^2$/)).toBeInTheDocument();
       expect(screen.getByText(/sleeping near bus stop/i)).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /open animal profile/i })).toHaveAttribute('href', '/animal?id=animal-1');
       expect(screen.getByRole('button', { name: /follow/i })).toBeInTheDocument();

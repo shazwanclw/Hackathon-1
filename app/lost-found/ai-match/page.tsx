@@ -124,105 +124,114 @@ export default function LostFoundAiMatchPage() {
 
   return (
     <PublicAccessGuard>
-      <section className="mx-auto max-w-4xl space-y-4 pb-16">
-        <h1 className="page-title">AI Lost & Found Match</h1>
-        <p className="page-subtitle">Phase 1 prototype: returns top 3 potential matches from recent stray posts.</p>
-
-        <div className="card space-y-3 p-4">
-          <UploadDropzone files={matchFiles} onFilesChange={onMatchFilesChange} error={matchFileError} />
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className={matchAnimalType === 'any' ? 'segment-active' : 'segment'}
-              onClick={() => setMatchAnimalType('any')}
-            >
-              Any
-            </button>
-            <button
-              type="button"
-              className={matchAnimalType === 'cat' ? 'segment-active' : 'segment'}
-              onClick={() => setMatchAnimalType('cat')}
-            >
-              Cat
-            </button>
-            <button
-              type="button"
-              className={matchAnimalType === 'dog' ? 'segment-active' : 'segment'}
-              onClick={() => setMatchAnimalType('dog')}
-            >
-              Dog
-            </button>
-          </div>
-
-          <div className="flex gap-2">
-            <button type="button" className="btn-primary" onClick={onFindMatches} disabled={matchLoading}>
-              {matchLoading ? 'Matching...' : 'Find Matches'}
-            </button>
-            <button type="button" className="btn-secondary" onClick={onSaveMatchHistory} disabled={historySaving || !matches.length}>
-              {historySaving ? 'Saving...' : 'Save Results to History'}
-            </button>
-            <Link className="btn-ghost" href="/lost-found">
-              Back to posts
-            </Link>
-          </div>
-
-          {!matchLoading && matches.length === 0 ? <p className="text-xs text-muted">No matches yet.</p> : null}
-
-          {matches.map((match, index) => (
-            <article key={`${match.animalId}-${index}`} className="card border border-brand-300/70 p-3">
-              <div className="flex gap-3">
-                {match.coverPhotoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={match.coverPhotoUrl} alt={`Match ${match.animalId}`} className="h-24 w-24 rounded-xl object-cover" />
-                ) : null}
-                <div className="space-y-1 text-sm">
-                  <p className="font-semibold text-brand-900">Match #{index + 1} • {(match.score * 100).toFixed(0)}%</p>
-                  <p className="text-brand-900">{match.reason || 'Potential visual similarity found.'}</p>
-                  <p className="text-xs text-muted capitalize">Type: {match.type || 'other'}</p>
-                  {match.lastSeenLocation ? (
-                    <p className="text-xs text-muted">
-                      Last seen: {match.lastSeenLocation.lat.toFixed(5)}, {match.lastSeenLocation.lng.toFixed(5)}
-                    </p>
-                  ) : null}
-                  <div className="flex gap-2">
-                    <Link className="link-inline" href={`/animal?id=${match.animalId}`}>
-                      Open profile
-                    </Link>
-                    <Link className="link-inline" href={`/map?animalId=${match.animalId}`}>
-                      View on map
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </article>
-          ))}
+      <section className="mx-auto max-w-6xl space-y-6 pb-16">
+        <div className="card-elevated p-6 sm:p-8">
+          <p className="pill">Phase 1 prototype</p>
+          <h1 className="page-title mt-3">AI Lost & Found Match</h1>
+          <p className="page-subtitle mt-2">Upload one photo to retrieve top likely matches from recent stray posts.</p>
         </div>
 
-        <div className="card space-y-3 p-4">
-          <h2 className="font-[var(--font-display)] text-2xl font-semibold text-brand-900">Match History</h2>
-          {!user ? <p className="text-xs text-muted">Sign in to view saved match history.</p> : null}
-          {user && historyLoading ? <p className="text-xs text-muted">Loading history...</p> : null}
-          {user && !historyLoading && historyItems.length === 0 ? <p className="text-xs text-muted">No saved history yet.</p> : null}
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <div className="space-y-4">
+            <div className="card-elevated space-y-4 p-6">
+              <UploadDropzone files={matchFiles} onFilesChange={onMatchFilesChange} error={matchFileError} />
 
-          {historyItems.map((item) => (
-            <article key={item.id} className="card border border-brand-300/70 p-3">
-              <p className="text-xs text-muted">
-                {item.createdAtLabel} • filter: <span className="capitalize">{item.animalType}</span>
-              </p>
-              <div className="mt-2 space-y-2">
-                {item.matches.map((match, index) => (
-                  <div key={`${item.id}-${match.animalId}-${index}`} className="flex gap-2 text-sm">
-                    <p className="font-semibold text-brand-900">#{index + 1}</p>
-                    <p className="text-brand-900">{(match.score * 100).toFixed(0)}%</p>
-                    <Link className="link-inline" href={`/animal?id=${match.animalId}`}>
-                      {match.animalId}
-                    </Link>
-                  </div>
-                ))}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className={matchAnimalType === 'any' ? 'segment-active' : 'segment'}
+                  onClick={() => setMatchAnimalType('any')}
+                >
+                  Any
+                </button>
+                <button
+                  type="button"
+                  className={matchAnimalType === 'cat' ? 'segment-active' : 'segment'}
+                  onClick={() => setMatchAnimalType('cat')}
+                >
+                  Cat
+                </button>
+                <button
+                  type="button"
+                  className={matchAnimalType === 'dog' ? 'segment-active' : 'segment'}
+                  onClick={() => setMatchAnimalType('dog')}
+                >
+                  Dog
+                </button>
               </div>
-            </article>
-          ))}
+
+              <div className="flex flex-wrap gap-2">
+                <button type="button" className="btn-primary" onClick={onFindMatches} disabled={matchLoading}>
+                  {matchLoading ? 'Matching...' : 'Find Matches'}
+                </button>
+                <button type="button" className="btn-secondary" onClick={onSaveMatchHistory} disabled={historySaving || !matches.length}>
+                  {historySaving ? 'Saving...' : 'Save Results to History'}
+                </button>
+                <Link className="btn-ghost" href="/lost-found">
+                  Back to posts
+                </Link>
+              </div>
+
+              {!matchLoading && matches.length === 0 ? <p className="text-xs text-muted">No matches yet.</p> : null}
+            </div>
+
+            <div className="space-y-3">
+              {matches.map((match, index) => (
+                <article key={`${match.animalId}-${index}`} className="card border border-brand-300/70 p-4">
+                  <div className="flex gap-3">
+                    {match.coverPhotoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={match.coverPhotoUrl} alt={`Match ${match.animalId}`} className="h-24 w-24 rounded-xl object-cover" />
+                    ) : null}
+                    <div className="space-y-2 text-sm">
+                      <p className="font-semibold text-brand-900">Match #{index + 1} • {(match.score * 100).toFixed(0)}%</p>
+                      <p className="text-brand-900">{match.reason || 'Potential visual similarity found.'}</p>
+                      <p className="text-xs text-muted capitalize">Type: {match.type || 'other'}</p>
+                      {match.lastSeenLocation ? (
+                        <p className="text-xs text-muted">
+                          Last seen: {match.lastSeenLocation.lat.toFixed(5)}, {match.lastSeenLocation.lng.toFixed(5)}
+                        </p>
+                      ) : null}
+                      <div className="flex gap-2">
+                        <Link className="btn-secondary px-3 py-1.5 text-xs" href={`/animal?id=${match.animalId}`}>
+                          Open profile
+                        </Link>
+                        <Link className="btn-ghost px-3 py-1.5 text-xs" href={`/map?animalId=${match.animalId}`}>
+                          View on map
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+
+          <div className="card space-y-3 p-5 lg:sticky lg:top-24 lg:self-start">
+            <h2 className="font-[var(--font-display)] text-3xl font-semibold text-brand-900">Match History</h2>
+            {!user ? <p className="text-xs text-muted">Sign in to view saved match history.</p> : null}
+            {user && historyLoading ? <p className="text-xs text-muted">Loading history...</p> : null}
+            {user && !historyLoading && historyItems.length === 0 ? <p className="text-xs text-muted">No saved history yet.</p> : null}
+
+            {historyItems.map((item) => (
+              <article key={item.id} className="rounded-2xl border border-brand-300/70 bg-white/70 p-3">
+                <p className="text-xs text-muted">
+                  {item.createdAtLabel} • filter: <span className="capitalize">{item.animalType}</span>
+                </p>
+                <div className="mt-2 space-y-2">
+                  {item.matches.map((match, index) => (
+                    <div key={`${item.id}-${match.animalId}-${index}`} className="flex items-center gap-2 text-sm">
+                      <p className="font-semibold text-brand-900">#{index + 1}</p>
+                      <p className="text-brand-900">{(match.score * 100).toFixed(0)}%</p>
+                      <Link className="link-inline" href={`/animal?id=${match.animalId}`}>
+                        {match.animalId}
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
     </PublicAccessGuard>

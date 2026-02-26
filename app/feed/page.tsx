@@ -9,6 +9,13 @@ import { observeAuth } from '@/lib/auth';
 import { addCommentToAnimalFeed, getAnimalById, listFeedSightings, toggleLikeInAnimalFeed } from '@/lib/data';
 import { AnimalProfile, FeedSighting } from '@/lib/types';
 
+function splitIntoSentences(text: string) {
+  return text
+    .split(/(?<=[.!?])\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
 function FeedPhotoCarousel({ item }: { item: FeedSighting }) {
   const photos = useMemo(
     () => ((item.photoUrls && item.photoUrls.length > 0 ? item.photoUrls : [item.photoUrl]).filter(Boolean).slice(0, 3)),
@@ -184,137 +191,142 @@ export default function FeedPage() {
 
   return (
     <PublicAccessGuard>
-      <section className="mx-auto max-w-6xl space-y-4">
-        <h1 className="page-title">Stray Feed</h1>
-        <p className="page-subtitle">Latest community sightings, newest first.</p>
+      <div className="page-pet-bg-fixed" aria-hidden />
+      <section className="relative z-10 mx-auto max-w-6xl space-y-4">
+        <div className="mx-auto w-full max-w-3xl space-y-4">
+          <h1 className="page-title">Stray Feed</h1>
+          {loading ? <LoadingState text="Loading feed..." /> : null}
+          {!loading && error ? <ErrorState text={error} /> : null}
 
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-          <div className="space-y-4">
-            {loading ? <LoadingState text="Loading feed..." /> : null}
-            {!loading && error ? <ErrorState text={error} /> : null}
+          {!loading && !error && items.length === 0 ? (
+            <div className="card p-4 text-sm text-muted">No sightings yet.</div>
+          ) : null}
 
-            {!loading && !error && items.length === 0 ? (
-              <div className="card p-4 text-sm text-muted">No sightings yet.</div>
-            ) : null}
-
-            {!loading && !error
-              ? items.map((item) => (
-                  <article key={item.id} className="card overflow-hidden">
-                    <div className="space-y-3 p-4 text-sm">
-                  <div className="flex items-center gap-3">
-                    {item.reporterPhotoURL ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={item.reporterPhotoURL} alt={`${item.reporterUsername || item.reporterEmail} avatar`} className="h-10 w-10 rounded-full object-cover" />
-                    ) : (
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-200 text-sm font-bold text-brand-900">
-                        {(item.reporterUsername || item.reporterEmail || '?').slice(0, 1).toUpperCase()}
+          {!loading && !error
+            ? items.map((item, index) => (
+                <React.Fragment key={item.id}>
+                  <article className="card overflow-hidden">
+                    <div className="space-y-4 p-5 text-sm sm:p-6">
+                      <div className="flex items-center gap-3">
+                        {item.reporterPhotoURL ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={item.reporterPhotoURL} alt={`${item.reporterUsername || item.reporterEmail} avatar`} className="h-10 w-10 rounded-full object-cover" />
+                        ) : (
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-200 text-sm font-bold text-brand-900">
+                            {(item.reporterUsername || item.reporterEmail || '?').slice(0, 1).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <Link
+                            className="truncate font-semibold text-brand-900 hover:underline"
+                            href={`/profile?uid=${encodeURIComponent(item.reporterUid)}`}
+                          >
+                            {item.reporterUsername || item.reporterEmail}
+                          </Link>
+                        </div>
+                        <p className="text-xs text-brand-800/70">{item.createdAtLabel}</p>
                       </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <Link
-                        className="truncate font-semibold text-brand-900 hover:underline"
-                        href={`/profile?uid=${encodeURIComponent(item.reporterUid)}`}
-                      >
-                        {item.reporterUsername || item.reporterEmail}
-                      </Link>
-                    </div>
-                    <p className="text-xs text-brand-800/70">{item.createdAtLabel}</p>
-                  </div>
 
-                  <FeedPhotoCarousel item={item} />
+                      <FeedPhotoCarousel item={item} />
 
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        className="btn-ghost px-3 py-1 text-xs"
-                        aria-label="Like post"
-                        disabled={!viewerUid}
-                        onClick={() => onLike(item)}
-                      >
-                        {'\u2764\ufe0f'} {item.likeCount ?? 0}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-ghost px-3 py-1 text-xs"
-                        aria-label="Toggle comments"
-                        onClick={() => setExpandedComments((prev) => ({ ...prev, [item.id]: !prev[item.id] }))}
-                      >
-                        {'\ud83d\udcac'} {item.commentCount ?? 0}
-                      </button>
-                    </div>
-                    {item.aiRiskUrgency ? (
-                      <p className="text-xs text-muted">
-                        Urgency Level: <span className="font-semibold capitalize text-brand-900">{item.aiRiskUrgency}</span>
-                      </p>
-                    ) : null}
-                  </div>
+                      <div className="rounded-2xl border border-brand-200/70 bg-brand-100/45 px-3 py-2">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              className="btn-ghost px-3 py-1 text-xs"
+                              aria-label="Like post"
+                              disabled={!viewerUid}
+                              onClick={() => onLike(item)}
+                            >
+                              {'\u2764\ufe0f'} {item.likeCount ?? 0}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-ghost px-3 py-1 text-xs"
+                              aria-label="Toggle comments"
+                              onClick={() => setExpandedComments((prev) => ({ ...prev, [item.id]: !prev[item.id] }))}
+                            >
+                              {'\ud83d\udcac'} {item.commentCount ?? 0}
+                            </button>
+                          </div>
+                          {item.aiRiskUrgency ? (
+                            <p className="text-xs text-muted">
+                              Urgency Level: <span className="font-semibold capitalize text-brand-900">{item.aiRiskUrgency}</span>
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
 
-                  <p className="text-brand-900">{item.caption || 'No caption provided.'}</p>
+                      <p className="text-base leading-relaxed text-brand-900">{item.caption || 'No caption provided.'}</p>
 
-                  <div className="flex gap-3 text-sm">
-                    <button type="button" className="btn-ghost px-3 py-1 text-xs" onClick={() => setActiveAiScan(item)}>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <button type="button" className="btn-ghost w-full justify-center px-3 py-2 text-xs" onClick={() => setActiveAiScan(item)}>
                       See AI health scan
                     </button>
-                    <Link className="btn-secondary" href={`/animal?id=${item.animalId}`}>
+                    <Link className="btn-secondary w-full justify-center text-center" href={`/animal?id=${item.animalId}`}>
                       Open animal profile
                     </Link>
-                    <Link className="btn-ghost" href={`/map?animalId=${item.animalId}`}>
+                    <Link className="btn-ghost w-full justify-center text-center" href={`/map?animalId=${item.animalId}`}>
                       View on map
                     </Link>
                   </div>
 
-                  {expandedComments[item.id] ? (
-                    <div className="space-y-2 border-t border-brand-200/70 pt-3">
-                      {item.comments && item.comments.length > 0 ? (
-                        <div className="space-y-1 text-xs text-muted">
-                          {item.comments.map((comment) => (
-                            <p key={comment.id}>
-                              <span className="font-semibold text-brand-900">{comment.authorEmail}</span>: {comment.content}
-                            </p>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-muted">No comments yet.</p>
-                      )}
+                      {expandedComments[item.id] ? (
+                        <div className="space-y-2 border-t border-brand-200/70 pt-3">
+                          {item.comments && item.comments.length > 0 ? (
+                            <div className="space-y-1 text-xs text-muted">
+                              {item.comments.map((comment) => (
+                                <p key={comment.id}>
+                                  <span className="font-semibold text-brand-900">{comment.authorEmail}</span>: {comment.content}
+                                </p>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted">No comments yet.</p>
+                          )}
 
-                      {viewerUid ? (
-                        <>
-                          <input
-                            className="input"
-                            placeholder="Add a comment"
-                            value={commentDrafts[item.id] ?? ''}
-                            onChange={(event) => setCommentDrafts((prev) => ({ ...prev, [item.id]: event.target.value }))}
-                          />
-                          <button type="button" className="btn-secondary px-3 py-1 text-xs" onClick={() => onPostComment(item)}>
-                            Post comment
-                          </button>
-                        </>
-                      ) : (
-                        <p className="text-xs text-muted">Sign in to comment.</p>
-                      )}
-                    </div>
-                  ) : null}
+                          {viewerUid ? (
+                            <>
+                              <input
+                                className="input"
+                                placeholder="Add a comment"
+                                value={commentDrafts[item.id] ?? ''}
+                                onChange={(event) => setCommentDrafts((prev) => ({ ...prev, [item.id]: event.target.value }))}
+                              />
+                              <button type="button" className="btn-secondary px-3 py-1 text-xs" onClick={() => onPostComment(item)}>
+                                Post comment
+                              </button>
+                            </>
+                          ) : (
+                            <p className="text-xs text-muted">Sign in to comment.</p>
+                          )}
+                        </div>
+                      ) : null}
                     </div>
                   </article>
-                ))
-              : null}
-          </div>
-
-          <aside className="lg:sticky lg:top-20 lg:self-start">
-            <div className="card-elevated space-y-3 border border-honey-300">
-              <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">Lost & Found</p>
-              <h2 className="font-[var(--font-display)] text-3xl font-semibold text-brand-900">
-                Did you lose your pet?
-              </h2>
-              <p className="text-sm text-brand-900">
-                Post your pet photos and contact details so the community can help bring them home.
-              </p>
-              <Link className="btn-primary w-full justify-center text-center" href="/lost-found">
-                Open Lost & Found
-              </Link>
-            </div>
-          </aside>
+                  {index === 1 ? (
+                    <article className="card-elevated space-y-3 border border-honey-300">
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">Lost & Found</p>
+                        <span className="rounded-full border border-brand-300/80 bg-honey-100/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-800">
+                          Promotion
+                        </span>
+                      </div>
+                      <h2 className="font-[var(--font-display)] text-3xl font-semibold text-brand-900">
+                        Did you lose your pet?
+                      </h2>
+                      <p className="text-sm text-brand-900">
+                        Post your pet photos and contact details so the community can help bring them home.
+                      </p>
+                      <Link className="btn-primary w-full justify-center text-center" href="/lost-found">
+                        Open Lost & Found
+                      </Link>
+                    </article>
+                  ) : null}
+                </React.Fragment>
+              ))
+            : null}
         </div>
       </section>
 
@@ -325,16 +337,33 @@ export default function FeedPage() {
             {aiScanLoading ? <p className="mt-3 text-sm text-muted">Loading AI health scan...</p> : null}
             {!aiScanLoading && aiScanError ? <p className="mt-3 text-sm text-muted">{aiScanError}</p> : null}
             {!aiScanLoading && !aiScanError && activeAiScanProfile?.aiRisk ? (
-              <div className="mt-3 rounded-xl border border-brand-300 bg-brand-100/55 p-3 text-sm">
-                <p className="font-semibold text-brand-900">AI welfare risk screening (not diagnosis)</p>
-                <p className="capitalize text-brand-900">Urgency: {activeAiScanProfile.aiRisk.urgency}</p>
-                <p className="text-brand-900">Reason: {activeAiScanProfile.aiRisk.reason}</p>
-                <p className="text-brand-900">
-                  Visible indicators: {activeAiScanProfile.aiRisk.visibleIndicators.join(', ') || 'none'}
-                </p>
-                <p className="text-brand-900">Confidence: {activeAiScanProfile.aiRisk.confidence}</p>
-                <p className="text-xs text-muted">{activeAiScanProfile.aiRisk.disclaimer}</p>
-                <p className="text-xs text-brand-800/70">Generated: {activeAiScanProfile.aiRisk.createdAtLabel}</p>
+              <div className="mt-3 rounded-2xl border border-brand-300 bg-brand-100/55 p-4 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-semibold text-brand-900">AI welfare risk screening</p>
+                  <span className="rounded-full border border-brand-400/70 bg-white/80 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-800">
+                    Urgency: {activeAiScanProfile.aiRisk.urgency}
+                  </span>
+                </div>
+                {activeAiScanProfile.aiRisk.reason ? (
+                  <div className="mt-3 space-y-1 rounded-xl border border-brand-200/80 bg-white/75 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">AI Notes</p>
+                    {splitIntoSentences(activeAiScanProfile.aiRisk.reason).map((line, idx) => (
+                      <p key={`${line}-${idx}`} className="text-sm text-brand-900">
+                        {line}
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <div className="rounded-xl border border-brand-200/80 bg-white/75 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">AI Accuracy Level</p>
+                    <p className="text-lg font-semibold text-brand-900">{Math.round((activeAiScanProfile.aiRisk.confidence || 0) * 100)}%</p>
+                  </div>
+                  <div className="rounded-xl border border-brand-200/80 bg-white/75 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">Visible indicators</p>
+                    <p className="text-sm text-brand-900">{activeAiScanProfile.aiRisk.visibleIndicators.join(', ') || 'none'}</p>
+                  </div>
+                </div>
               </div>
             ) : (
               !aiScanLoading && !aiScanError ? <p className="mt-3 text-sm text-muted">AI welfare screening not available yet.</p> : null

@@ -89,7 +89,7 @@ export default function AuthPage() {
         <Image src="/images/hero-cat.jpeg" alt="" fill priority className="hero-image" />
         <div className="hero-tint bg-[linear-gradient(90deg,rgba(25,18,12,0.5)_0%,rgba(25,18,12,0.7)_52%,rgba(25,18,12,0.78)_100%)]" />
         <div className="hero-content flex min-h-[72vh] items-center justify-end">
-          <div className="w-full max-w-xl rounded-[2rem] bg-[rgba(115,96,74,0.92)] p-7 text-white shadow-[0_22px_40px_rgba(0,0,0,0.35)] backdrop-blur-sm sm:p-8">
+          <div className="w-full max-w-xl rounded-[2rem] border border-honey-100/25 bg-[rgba(95,77,56,0.9)] p-7 text-white shadow-[0_22px_40px_rgba(0,0,0,0.35)] backdrop-blur-sm sm:p-8">
             <div className="mb-5 flex gap-3">
               <button
                 type="button"
@@ -111,28 +111,28 @@ export default function AuthPage() {
 
             <h1 className="font-[var(--font-body)] text-5xl font-semibold leading-tight text-white">{title}</h1>
 
-            <button className="btn-secondary mt-5 w-full border-brand-100/40 bg-[#f2e4be] text-2xl font-medium text-brand-900" type="button" onClick={onGoogleSignIn} disabled={submitting}>
+            <button className="btn-secondary mt-5 w-full border-brand-100/40 bg-[#f2e4be] text-xl font-semibold text-brand-900" type="button" onClick={onGoogleSignIn} disabled={submitting}>
               {submitting ? 'Please wait...' : 'Continue with Google'}
             </button>
 
             <form className="mt-5 space-y-3" onSubmit={onSubmit}>
               <div className="space-y-1">
-                <label htmlFor="email" className="block text-3xl font-medium text-white">Email</label>
+                <label htmlFor="email" className="label text-white">Email</label>
                 <input
                   id="email"
                   type="email"
-                  className="w-full rounded-3xl border border-white/40 bg-white px-4 py-2.5 text-2xl text-brand-900 outline-none focus:ring-2 focus:ring-honey-300"
+                  className="input border-white/45 bg-white/10 text-lg text-white placeholder:text-white/70"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
               <div className="space-y-1">
-                <label htmlFor="password" className="block text-3xl font-medium text-white">Password</label>
+                <label htmlFor="password" className="label text-white">Password</label>
                 <input
                   id="password"
                   type="password"
-                  className="w-full rounded-3xl border border-white/40 bg-white px-4 py-2.5 text-2xl text-brand-900 outline-none focus:ring-2 focus:ring-honey-300"
+                  className="input border-white/45 bg-white/10 text-lg text-white placeholder:text-white/70"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   minLength={6}
@@ -140,12 +140,12 @@ export default function AuthPage() {
                 />
               </div>
               {error ? <p className="text-sm text-rose-200">{error}</p> : null}
-              <button className="btn-primary w-full bg-brand-800 text-4xl font-medium text-white sm:text-[2rem]" type="submit" disabled={submitting}>
+              <button className="btn-primary w-full bg-brand-800 text-2xl font-semibold text-white sm:text-3xl" type="submit" disabled={submitting}>
                 {submitting ? 'Please wait...' : mode === 'login' ? 'Login' : 'Create Account'}
               </button>
             </form>
 
-            <button className="btn-ghost mt-4 w-full border-white/40 bg-white text-2xl font-medium text-brand-900 sm:text-[1.8rem]" type="button" onClick={onGuest}>
+            <button className="btn-ghost mt-4 w-full border-white/40 bg-white text-xl font-semibold text-brand-900 sm:text-2xl" type="button" onClick={onGuest}>
               Join as Guest
             </button>
           </div>

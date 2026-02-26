@@ -134,22 +134,22 @@ function ProfilePageContent() {
 
   return (
     <PublicAccessGuard>
-      <section className="mx-auto max-w-3xl space-y-4">
+      <section className="mx-auto max-w-6xl space-y-6">
         <h1 className="page-title">User Profile</h1>
 
         {loading ? <LoadingState text="Loading profile..." /> : null}
         {!loading && error ? <ErrorState text={error} /> : null}
 
         {!loading && !error && profile ? (
-          <article className="card p-5 text-sm">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <div className="relative">
+          <article className="card-elevated p-6 sm:p-8">
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-center">
+              <div className="flex items-start gap-4 sm:gap-5">
+                <div className="relative shrink-0">
                   {profile.photoURL ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={profile.photoURL} alt={`${profile.username} avatar`} className="h-16 w-16 rounded-full object-cover" />
+                    <img src={profile.photoURL} alt={`${profile.username} avatar`} className="h-24 w-24 rounded-full border-2 border-honey-200/70 object-cover shadow-[0_10px_20px_rgba(62,40,20,0.25)] sm:h-28 sm:w-28" />
                   ) : (
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-200 text-xl font-bold text-brand-900">
+                    <div className="flex h-24 w-24 items-center justify-center rounded-full border-2 border-honey-200/70 bg-brand-200 text-3xl font-bold text-brand-900 shadow-[0_10px_20px_rgba(62,40,20,0.25)] sm:h-28 sm:w-28">
                       {profile.username.slice(0, 1).toUpperCase()}
                     </div>
                   )}
@@ -162,7 +162,7 @@ function ProfilePageContent() {
                         onClick={() => photoInputRef.current?.click()}
                         disabled={savingProfile}
                       >
-                        ✎
+                        Edit
                       </button>
                       <input
                         ref={photoInputRef}
@@ -174,33 +174,34 @@ function ProfilePageContent() {
                     </>
                   ) : null}
                 </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1 space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
                     {editingUsername && isOwnProfile ? (
                       <input
-                        className="input h-9 py-1"
+                        className="input h-10 max-w-xs py-2"
                         aria-label="Edit username"
                         value={usernameDraft}
                         onChange={(event) => setUsernameDraft(event.target.value)}
                       />
                     ) : (
-                      <p className="truncate text-xl font-semibold text-brand-900">{profile.username}</p>
+                      <p className="truncate font-[var(--font-display)] text-4xl font-semibold text-brand-900 sm:text-5xl">{profile.username}</p>
                     )}
                     {isOwnProfile ? (
                       <button
                         type="button"
                         aria-label="Edit username"
-                        className="rounded-full border border-brand-300 bg-honey-200 px-2 py-1 text-[10px] text-brand-900"
+                        className="btn-ghost px-3 py-1 text-xs"
                         onClick={() => setEditingUsername((prev) => !prev)}
                         disabled={savingProfile}
                       >
-                        ✎
+                        Edit name
                       </button>
                     ) : null}
                   </div>
-                  <p className="text-sm text-muted">{profile.email}</p>
+                  <p className="text-base text-muted">{profile.email}</p>
+
                   {editingUsername && isOwnProfile ? (
-                    <div className="mt-2 flex gap-2">
+                    <div className="flex gap-2">
                       <button className="btn-secondary px-3 py-1 text-xs" type="button" onClick={onSaveUsername} disabled={savingProfile}>
                         {savingProfile ? 'Saving...' : 'Save username'}
                       </button>
@@ -219,49 +220,68 @@ function ProfilePageContent() {
                   ) : null}
                 </div>
               </div>
+
+              <div className="mx-auto grid w-full max-w-[24rem] grid-cols-3 place-self-center gap-2 self-center items-start auto-rows-min sm:gap-3">
+                <div className="h-fit rounded-xl border border-brand-300/80 bg-white/75 px-2.5 py-1 text-center">
+                  <p className="font-[var(--font-display)] text-xl font-semibold leading-none text-brand-900 sm:text-2xl">{profile.followersCount}</p>
+                  <p className="mt-0.5 text-[9px] font-semibold uppercase leading-none tracking-wide text-brand-700">Followers</p>
+                </div>
+                <div className="h-fit rounded-xl border border-brand-300/80 bg-white/75 px-2.5 py-1 text-center">
+                  <p className="font-[var(--font-display)] text-xl font-semibold leading-none text-brand-900 sm:text-2xl">{profile.followingCount}</p>
+                  <p className="mt-0.5 text-[9px] font-semibold uppercase leading-none tracking-wide text-brand-700">Following</p>
+                </div>
+                <div className="h-fit rounded-xl border border-brand-300/80 bg-white/75 px-2.5 py-1 text-center">
+                  <p className="font-[var(--font-display)] text-xl font-semibold leading-none text-brand-900 sm:text-2xl">{profile.reportCount}</p>
+                  <p className="mt-0.5 text-[9px] font-semibold uppercase leading-none tracking-wide text-brand-700">Posts</p>
+                </div>
+              </div>
+
               {!isOwnProfile ? (
-                <button className="btn-primary" type="button" onClick={onFollowToggle} disabled={followLoading || !authUid}>
-                  {isFollowing ? 'Unfollow' : 'Follow'}
-                </button>
+                <div className="flex justify-start lg:justify-end">
+                  <button className="btn-primary min-w-32" type="button" onClick={onFollowToggle} disabled={followLoading || !authUid}>
+                    {isFollowing ? 'Unfollow' : 'Follow'}
+                  </button>
+                </div>
               ) : null}
-            </div>
-            <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted">
-              <p>Followers: {profile.followersCount}</p>
-              <p>Following: {profile.followingCount}</p>
-              <p>Posts: {profile.reportCount}</p>
             </div>
           </article>
         ) : null}
 
         {!loading && !error ? (
           <section className="space-y-3">
-            <h2 className="font-[var(--font-display)] text-2xl font-semibold text-brand-900">Posts</h2>
+            <h2 className="font-[var(--font-display)] text-4xl font-semibold text-brand-900">Posts</h2>
             {reports.length === 0 ? <EmptyState text="No posts found for this user." /> : null}
-            {reports.map((item) => (
-              <article key={item.id} className="card overflow-hidden">
-                {(item.photoUrls && item.photoUrls.length > 0) || item.photoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={(item.photoUrls && item.photoUrls.length > 0 ? item.photoUrls : [item.photoUrl])[0]}
-                    alt={`${item.type} sighting`}
-                    className="h-80 w-full object-cover"
-                  />
-                ) : null}
-                <div className="space-y-2 p-4 text-sm">
-                  <p className="font-semibold capitalize text-brand-900">{item.type}</p>
-                  <p className="text-brand-900">{item.caption || 'No caption provided.'}</p>
-                  <p className="text-xs text-brand-800/70">{item.createdAtLabel}</p>
-                  <div className="flex gap-4 text-sm">
-                    <Link className="link-inline" href={`/animal?id=${item.animalId}`}>
-                      Open animal profile
-                    </Link>
-                    <Link className="link-inline" href={`/map?animalId=${item.animalId}`}>
-                      View on map
-                    </Link>
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              {reports.map((item) => (
+                <article key={item.id} className="card overflow-hidden">
+                  {(item.photoUrls && item.photoUrls.length > 0) || item.photoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={(item.photoUrls && item.photoUrls.length > 0 ? item.photoUrls : [item.photoUrl])[0]}
+                      alt={`${item.type} sighting`}
+                      className="h-64 w-full object-cover"
+                    />
+                  ) : null}
+                  <div className="space-y-3 p-5">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="rounded-full border border-brand-300/70 bg-brand-100/70 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-800">
+                        {item.type}
+                      </p>
+                      <p className="text-xs text-brand-800/70">{item.createdAtLabel}</p>
+                    </div>
+                    <p className="min-h-16 text-sm leading-relaxed text-brand-900">{item.caption || 'No caption provided.'}</p>
+                    <div className="flex flex-wrap gap-2">
+                      <Link className="btn-secondary justify-center px-3 py-1.5 text-xs text-center" href={`/animal?id=${item.animalId}`}>
+                        Open animal profile
+                      </Link>
+                      <Link className="btn-ghost justify-center px-3 py-1.5 text-xs text-center" href={`/map?animalId=${item.animalId}`}>
+                        View on map
+                      </Link>
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              ))}
+            </div>
           </section>
         ) : null}
       </section>

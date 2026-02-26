@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Cormorant_Garamond, Lobster, Manrope } from 'next/font/google';
+import { Cormorant_Garamond, Lobster_Two, Manrope } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';
 import Navbar from '@/components/Navbar';
 import '@/styles/globals.css';
@@ -20,10 +20,10 @@ const displayFont = Cormorant_Garamond({
   weight: ['600', '700'],
 });
 
-const logoFont = Lobster({
+const logoFont = Lobster_Two({
   subsets: ['latin'],
   variable: '--font-logo',
-  weight: ['400'],
+  weight: ['700'],
 });
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -32,7 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${bodyFont.variable} ${displayFont.variable} ${logoFont.variable} font-[var(--font-body)]`}>
         <div className="app-shell">
           <Navbar />
-          <main className="container-shell py-7">{children}</main>
+          <main className="container-shell py-9">{children}</main>
         </div>
         <Toaster
           position="top-right"
@@ -40,8 +40,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             style: {
               borderRadius: '14px',
               border: '1px solid #d8bf90',
-              background: '#fffaf0',
+              background: '#fffaf2',
               color: '#342311',
+              boxShadow: '0 12px 28px rgba(77, 52, 26, 0.2)',
             },
           }}
         />
