@@ -70,7 +70,7 @@ export default function AdoptionDetailPage() {
               <p className="text-sm font-semibold uppercase tracking-wide text-brand-800">{item.petType}</p>
               <p className="text-brand-900">Age: {item.ageText || 'Unknown'}</p>
               <p className="text-brand-900">{item.description || 'No description provided.'}</p>
-              <p className="text-sm text-muted">Listed by {item.shelterName || 'Unknown shelter'} • {item.createdAtLabel}</p>
+              <p className="text-sm text-muted">Listed by {item.shelterName || 'Unknown shelter'} - {item.createdAtLabel}</p>
               <div className="flex gap-2">
                 <Link className="btn-primary" href={`/adoption/contact/${encodeURIComponent(item.id)}`}>
                   Contact Shelter
