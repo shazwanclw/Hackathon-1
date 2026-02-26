@@ -1,13 +1,17 @@
 "use client";
 
 import React, { FormEvent, useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { User } from 'firebase/auth';
 import PublicAccessGuard from '@/components/PublicAccessGuard';
 import UploadDropzone from '@/components/UploadDropzone';
 import { observeAuth } from '@/lib/auth';
+import { reverseGeocode } from '@/lib/geocoding';
 import { createLostFoundPost, createLostFoundPostId, uploadLostFoundImage } from '@/lib/data';
+
+const MapPicker = dynamic(() => import('@/components/MapPicker'), { ssr: false });
 
 export default function LostFoundCreatePage() {
   const [user, setUser] = useState<User | null>(null);
@@ -18,6 +22,9 @@ export default function LostFoundCreatePage() {
   const [petName, setPetName] = useState('');
   const [description, setDescription] = useState('');
   const [contactInfo, setContactInfo] = useState('');
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationLabel, setLocationLabel] = useState('');
+  const [locationMessage, setLocationMessage] = useState('Pick a location on the map.');
 
   useEffect(() => {
     const unsub = observeAuth((next) => {
@@ -26,6 +33,36 @@ export default function LostFoundCreatePage() {
     });
     return () => unsub();
   }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    async function resolveLabel() {
+      if (!location) {
+        setLocationLabel('');
+        return;
+      }
+
+      setLocationMessage('Looking up location name...');
+      try {
+        const result = await reverseGeocode(location);
+        if (!active) return;
+        const fallback = `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}`;
+        setLocationLabel(result.label || fallback);
+        setLocationMessage('');
+      } catch {
+        if (!active) return;
+        setLocationLabel(`${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}`);
+        setLocationMessage('');
+      }
+    }
+
+    resolveLabel();
+
+    return () => {
+      active = false;
+    };
+  }, [location]);
 
   function onFilesChange(next: File[]) {
     if (!next.length) {
@@ -66,11 +103,16 @@ export default function LostFoundCreatePage() {
       toast.error('Please enter your contact information.');
       return;
     }
+    if (!location) {
+      toast.error('Please pick a location on the map.');
+      return;
+    }
 
     setSubmitting(true);
     try {
       const postId = await createLostFoundPostId();
       const uploadedPhotos = await Promise.all(files.map((file) => uploadLostFoundImage(postId, file)));
+      const locationText = locationLabel || `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}`;
       await createLostFoundPost({
         id: postId,
         createdBy: user.uid,
@@ -78,6 +120,7 @@ export default function LostFoundCreatePage() {
         petName: petName.trim(),
         description: description.trim(),
         contactInfo: contactInfo.trim(),
+        locationText,
         photoUrls: uploadedPhotos.map((item) => item.downloadUrl),
         photoPaths: uploadedPhotos.map((item) => item.storagePath),
       });
@@ -86,6 +129,9 @@ export default function LostFoundCreatePage() {
       setPetName('');
       setDescription('');
       setContactInfo('');
+      setLocation(null);
+      setLocationLabel('');
+      setLocationMessage('Pick a location on the map.');
     } catch {
       toast.error('Failed to create post. Please try again.');
     } finally {
@@ -130,6 +176,17 @@ export default function LostFoundCreatePage() {
               onChange={(event) => setContactInfo(event.target.value)}
               placeholder="Phone, WhatsApp, or email"
             />
+          </div>
+
+          <div className="space-y-2">
+            <label className="label">Last seen location</label>
+            {locationMessage ? <p className="text-xs text-muted">{locationMessage}</p> : null}
+            {locationLabel ? <p className="text-xs text-muted">{locationLabel}</p> : null}
+          </div>
+          <div>
+            <label className="label">Select location on map</label>
+            <MapPicker value={location} onChange={setLocation} />
+            <p className="mt-1 text-xs text-muted">Search or click map to place marker.</p>
           </div>
 
           <div className="flex gap-2">
