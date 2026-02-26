@@ -229,6 +229,7 @@ export interface LostFoundPost {
   petName: string;
   description: string;
   contactInfo: string;
+  locationText: string;
   photoUrl: string;
   photoUrls: string[];
   createdAtLabel: string;
@@ -250,3 +251,4 @@ export interface LostFoundMatchHistoryItem {
   matches: LostFoundSavedMatch[];
   createdAtLabel: string;
 }
+
