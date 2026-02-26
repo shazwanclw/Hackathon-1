@@ -56,10 +56,13 @@ export default function LostFoundPage() {
                     <div className="space-y-2 p-4 text-sm">
                       <p className="font-semibold text-brand-900">{item.petName}</p>
                       <p className="text-brand-900">{item.description || 'No description provided.'}</p>
+                      {item.locationText ? (
+                        <p className="text-xs text-brand-800/80">Last seen: {item.locationText}</p>
+                      ) : null}
                       <p className="text-sm text-brand-900">
                         Contact: <span className="font-semibold">{item.contactInfo}</span>
                       </p>
-                      <p className="text-xs text-brand-800/70">Posted by {item.authorEmail || 'Unknown'} • {item.createdAtLabel}</p>
+                      <p className="text-xs text-brand-800/70">Posted by {item.authorEmail || 'Unknown'} â€¢ {item.createdAtLabel}</p>
                     </div>
                   </article>
                 ))
