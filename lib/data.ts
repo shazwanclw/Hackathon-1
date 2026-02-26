@@ -75,6 +75,53 @@ export async function uploadLostFoundImage(postId: string, file: File) {
   return { storagePath, downloadUrl };
 }
 
+export function buildLostFoundPostPayload(input: {
+  createdBy: string;
+  authorEmail: string;
+  petName: string;
+  description: string;
+  contactInfo: string;
+  locationText: string;
+  photoUrls: string[];
+  photoPaths: string[];
+}) {
+  const photoUrls = input.photoUrls.slice(0, 3);
+  const photoPaths = input.photoPaths.slice(0, 3);
+  return {
+    createdBy: input.createdBy,
+    authorEmail: input.authorEmail,
+    petName: input.petName,
+    description: input.description,
+    contactInfo: input.contactInfo,
+    locationText: input.locationText,
+    photoUrl: photoUrls[0] ?? '',
+    photoUrls,
+    photoPaths,
+    createdAt: serverTimestamp(),
+  };
+}
+
+export function mapLostFoundDocToPost(id: string, data: Record<string, unknown>): LostFoundPost {
+  const rawCreatedAt = data.createdAt as { toDate?: () => Date } | undefined;
+  const createdAt = typeof rawCreatedAt?.toDate === 'function' ? rawCreatedAt.toDate() : null;
+  const createdAtLabel = createdAt ? createdAt.toLocaleString() : 'Just now';
+  const photoUrls = Array.isArray(data.photoUrls) ? data.photoUrls.map((item) => String(item)).filter(Boolean).slice(0, 3) : [];
+  const fallbackPhoto = String(data.photoUrl ?? '');
+  const normalizedPhotoUrls = photoUrls.length ? photoUrls : fallbackPhoto ? [fallbackPhoto] : [];
+
+  return {
+    id,
+    createdBy: String(data.createdBy ?? ''),
+    authorEmail: String(data.authorEmail ?? 'Unknown'),
+    petName: String(data.petName ?? ''),
+    description: String(data.description ?? ''),
+    contactInfo: String(data.contactInfo ?? ''),
+    locationText: String(data.locationText ?? ''),
+    photoUrl: normalizedPhotoUrls[0] ?? '',
+    photoUrls: normalizedPhotoUrls,
+    createdAtLabel,
+  } as LostFoundPost;
+}
 export async function createLostFoundPost(input: {
   id: string;
   createdBy: string;
@@ -100,27 +147,7 @@ export async function createLostFoundPost(input: {
 
 export async function listLostFoundPosts(): Promise<LostFoundPost[]> {
   const snaps = await getDocs(query(collection(db, 'lost_found_posts'), orderBy('createdAt', 'desc'), limit(200)));
-  return snaps.docs.map((snap) => {
-    const data = snap.data() as Record<string, unknown>;
-    const rawCreatedAt = data.createdAt as { toDate?: () => Date } | undefined;
-    const createdAt = typeof rawCreatedAt?.toDate === 'function' ? rawCreatedAt.toDate() : null;
-    const createdAtLabel = createdAt ? createdAt.toLocaleString() : 'Just now';
-    const photoUrls = Array.isArray(data.photoUrls) ? data.photoUrls.map((item) => String(item)).filter(Boolean).slice(0, 3) : [];
-    const fallbackPhoto = String(data.photoUrl ?? '');
-    const normalizedPhotoUrls = photoUrls.length ? photoUrls : fallbackPhoto ? [fallbackPhoto] : [];
-
-    return {
-      id: snap.id,
-      createdBy: String(data.createdBy ?? ''),
-      authorEmail: String(data.authorEmail ?? 'Unknown'),
-      petName: String(data.petName ?? ''),
-      description: String(data.description ?? ''),
-      contactInfo: String(data.contactInfo ?? ''),
-      photoUrl: normalizedPhotoUrls[0] ?? '',
-      photoUrls: normalizedPhotoUrls,
-      createdAtLabel,
-    } as LostFoundPost;
-  });
+  return snaps.docs.map((snap) => mapLostFoundDocToPost(snap.id, snap.data() as Record<string, unknown>));
 }
 
 export async function saveLostFoundMatchHistory(input: {
@@ -840,3 +867,4 @@ function extractCreatedAt(data: Record<string, unknown>): Date | null {
 function extractCreatedAtTimestamp(data: Record<string, unknown>): number {
   return extractCreatedAt(data)?.getTime() ?? 0;
 }
+
