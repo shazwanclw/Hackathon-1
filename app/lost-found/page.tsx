@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -59,7 +59,7 @@ export default function LostFoundPage() {
                       <p className="text-sm text-brand-900">
                         Contact: <span className="font-semibold">{item.contactInfo}</span>
                       </p>
-                      <p className="text-xs text-brand-800/70">Posted by {item.authorEmail || 'Unknown'} • {item.createdAtLabel}</p>
+                      <p className="text-xs text-brand-800/70">Posted by {item.authorEmail || 'Unknown'} � {item.createdAtLabel}</p>
                     </div>
                   </article>
                 ))
