@@ -25,7 +25,7 @@ StrayLink is a free-tier web MVP for reporting stray animals/urban wildlife and 
 - User profile (`/profile` or `/profile?uid=<uid>`) showing reporter identity and all posts submitted by that user
 - Lost & Found owner board:
   - browse posts at `/lost-found`
-  - create post at `/lost-found/new` (photo + description + contact)
+  - create post at `/lost-found/new` (photo + description + contact + last seen location via map pin)
   - floating create button in Lost & Found posts page
 - Lost & Found AI Match (Phase 1 prototype):
   - open AI matcher at `/lost-found/ai-match`

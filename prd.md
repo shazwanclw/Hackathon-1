@@ -41,7 +41,7 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - Public report flow with image upload (<=3MB), location mode (auto-detect default + manual map fallback), and metadata.
 - Feed includes reporter email and profile link per report card.
 - Profile view lists reports submitted by a given user.
-- Lost & Found owner board for posting missing pet photos + contact info.
+- Lost & Found owner board for posting missing pet photos + contact info + last seen location.
 - Lost & Found AI Match (Phase 1 prototype) to retrieve top likely stray matches from existing reports.
 - Saved Match History for owners to revisit previous AI match runs.
 - Adoption board where public users can browse adoptable pets and contact shelters.
@@ -68,7 +68,7 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - Feed page `/feed` shows all reports (not user-scoped), including reporter email + profile link.
 - Profile page `/profile` shows user identity and user-scoped report history.
 - Lost & Found posts page `/lost-found` lists owner posts and includes AI match trigger.
-- Lost & Found create page `/lost-found/new` allows owners to post missing pet details with contact info.
+- Lost & Found create page `/lost-found/new` allows owners to post missing pet details with contact info and last seen location (map pin -> text).
 - Lost & Found AI match page `/lost-found/ai-match` provides matching and saved match history.
 - Adoption page `/adoption` lists pets available from shelters.
 - Adoption detail `/adoption/[id]` shows pet profile and contact CTA.
@@ -159,6 +159,7 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - `petName`: string
 - `description`: string
 - `contactInfo`: string
+- `locationText`: string (derived from map pin; no lat/lng stored)
 - `photoUrl`: string
 - `photoUrls`: string[]
 - `photoPaths`: string[]
