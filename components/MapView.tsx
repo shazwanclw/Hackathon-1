@@ -5,13 +5,14 @@ import '@/styles/leaflet.css';
 import L from 'leaflet';
 import { useRouter } from 'next/navigation';
 import 'leaflet.heat';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 
 type MapCase = {
   id: string;
   type?: string;
   coverPhotoUrl?: string;
+  aiRiskReasonPreview?: string;
   location?: { lat?: number; lng?: number };
 };
 
@@ -68,6 +69,64 @@ function HotspotHeatLayer({ points }: { points: Array<{ lat: number; lng: number
   return null;
 }
 
+function MarkerPopupActions({ item }: { item: { id: string; type?: string; aiRiskReasonPreview?: string } }) {
+  const router = useRouter();
+  const map = useMap();
+  const [shelterNotified, setShelterNotified] = useState(false);
+  const shortAiNotes = item.aiRiskReasonPreview?.trim()
+    ? `${item.aiRiskReasonPreview.trim().replace(/[.!,;:?-\s]+$/, '')}...`
+    : 'AI notes are still being generated...';
+
+  return (
+    <div className="min-w-[230px] max-w-[260px] space-y-3">
+      <div className="rounded-2xl border border-brand-300/80 bg-brand-100/60 p-3">
+        <p className="text-sm font-semibold text-brand-900">Quick summary</p>
+        <p className="mt-1 text-xs text-brand-900/80">
+          Type: {item.type ?? 'other'}
+        </p>
+        <p className="text-xs text-brand-900/80">AI note (preview): {shortAiNotes}</p>
+        <button
+          type="button"
+          className="mt-2 inline-flex items-center rounded-full border border-brand-300 bg-white/80 px-2.5 py-1 text-[11px] font-semibold text-brand-900 transition hover:bg-white"
+          onClick={() => router.push(`/animal?id=${item.id}`)}
+        >
+          Learn more
+        </button>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          aria-label="Notify shelter"
+          aria-pressed={shelterNotified}
+          className={
+            shelterNotified
+              ? 'rounded-xl border border-brand-400 bg-honey-200 px-3 py-2 text-sm font-semibold text-brand-900 transition'
+              : 'rounded-xl border border-brand-300 bg-brand-100/55 px-3 py-2 text-sm font-semibold text-brand-900 transition hover:bg-brand-100'
+          }
+          onClick={() => setShelterNotified((prev) => !prev)}
+        >
+          Notify shelter
+        </button>
+        <button
+          type="button"
+          aria-label="GO!"
+          className="rounded-xl border border-brand-300 bg-brand-100/55 px-3 py-2 text-sm font-bold uppercase tracking-wide text-brand-900 transition hover:bg-brand-100"
+        >
+          GO!
+        </button>
+      </div>
+      <button
+        type="button"
+        aria-label="Back to map"
+        className="w-full rounded-xl border border-brand-300 bg-white/80 px-3 py-2 text-xs font-semibold text-brand-900 transition hover:bg-white"
+        onClick={() => map.closePopup()}
+      >
+        Back to map
+      </button>
+    </div>
+  );
+}
+
 export default function MapView({
   cases,
   mode = 'normal',
@@ -77,7 +136,6 @@ export default function MapView({
   mode?: 'normal' | 'hotspot';
   hotspots?: HotspotCase[];
 }) {
-  const router = useRouter();
   const points = cases
     .filter((item) => typeof item.location?.lat === 'number' && typeof item.location?.lng === 'number')
     .map((item) => ({ ...item, lat: item.location!.lat as number, lng: item.location!.lng as number }));
@@ -117,14 +175,9 @@ export default function MapView({
                 key={item.id}
                 position={{ lat: item.lat, lng: item.lng }}
                 icon={item.coverPhotoUrl ? buildPhotoMarkerIcon(item.coverPhotoUrl) : defaultMarkerIcon}
-                eventHandlers={{
-                  click: () => router.push(`/animal?id=${item.id}`),
-                }}
               >
                 <Popup>
-                  Animal #{item.id}
-                  <br />
-                  {item.type ?? 'other'}
+                  <MarkerPopupActions item={item} />
                 </Popup>
               </Marker>
             ))}

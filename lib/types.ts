@@ -198,6 +198,7 @@ export interface AnimalMapMarker {
   id: string;
   type: AnimalType;
   coverPhotoUrl?: string;
+  aiRiskReasonPreview?: string;
   location: {
     lat: number;
     lng: number;

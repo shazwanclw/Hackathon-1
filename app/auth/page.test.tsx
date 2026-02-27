@@ -46,6 +46,14 @@ describe('Public auth page', () => {
     expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument();
   });
 
+  it('keeps email and password labels white for contrast', () => {
+    render(<AuthPage />);
+    expect(screen.getByText('Email')).not.toHaveClass('label');
+    expect(screen.getByText('Password')).not.toHaveClass('label');
+    expect(screen.getByText('Email')).toHaveClass('text-white');
+    expect(screen.getByText('Password')).toHaveClass('text-white');
+  });
+
   it('stores guest access and navigates home on guest flow', () => {
     render(<AuthPage />);
     fireEvent.click(screen.getByRole('button', { name: /join as guest/i }));

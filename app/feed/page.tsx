@@ -94,6 +94,7 @@ export default function FeedPage() {
   const [viewerEmail, setViewerEmail] = useState('');
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
+  const [notifiedShelterBySighting, setNotifiedShelterBySighting] = useState<Record<string, boolean>>({});
   const [activeAiScan, setActiveAiScan] = useState<FeedSighting | null>(null);
   const [activeAiScanProfile, setActiveAiScanProfile] = useState<AnimalProfile | null>(null);
   const [aiScanLoading, setAiScanLoading] = useState(false);
@@ -248,6 +249,24 @@ export default function FeedPage() {
                               onClick={() => setExpandedComments((prev) => ({ ...prev, [item.id]: !prev[item.id] }))}
                             >
                               {'\ud83d\udcac'} {item.commentCount ?? 0}
+                            </button>
+                            <button
+                              type="button"
+                              aria-label="Notify shelter"
+                              aria-pressed={!!notifiedShelterBySighting[item.id]}
+                              className={
+                                notifiedShelterBySighting[item.id]
+                                  ? 'rounded-full border border-brand-400 bg-honey-200 px-3 py-1 text-xs font-semibold text-brand-900 shadow-sm transition'
+                                  : 'btn-ghost px-3 py-1 text-xs'
+                              }
+                              onClick={() =>
+                                setNotifiedShelterBySighting((prev) => ({
+                                  ...prev,
+                                  [item.id]: !prev[item.id],
+                                }))
+                              }
+                            >
+                              Notify shelter
                             </button>
                           </div>
                           {item.aiRiskUrgency ? (

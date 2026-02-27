@@ -737,6 +737,10 @@ export async function listAnimalMapMarkers(): Promise<AnimalMapMarker[]> {
         id: snap.id,
         type: (data.type as AnimalType) ?? 'other',
         coverPhotoUrl: String(data.coverPhotoUrl ?? ''),
+        aiRiskReasonPreview:
+          data.aiRisk && typeof (data.aiRisk as Record<string, unknown>).reason === 'string'
+            ? String((data.aiRisk as Record<string, unknown>).reason).slice(0, 120)
+            : '',
         location: { lat, lng },
       } as AnimalMapMarker;
     })

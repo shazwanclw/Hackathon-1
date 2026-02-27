@@ -50,7 +50,7 @@ export default function PublicMapPage() {
           </div>
           <p className="page-subtitle">
             {mapMode === 'normal'
-              ? 'Use this map to view animals near your area. Click a marker to open the animal profile.'
+              ? 'Use this map to view animals near your area. Click a marker to view a quick summary and choose your next action.'
               : 'Switch to hotspot mode to see dense report areas and prioritize where attention is needed.'}
           </p>
           <div className="flex flex-wrap gap-2">

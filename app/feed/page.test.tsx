@@ -112,12 +112,16 @@ describe('Feed page', () => {
       expect(screen.getByRole('button', { name: /next photo/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /like post/i })).toHaveTextContent('1');
       expect(screen.getByRole('button', { name: /toggle comments/i })).toHaveTextContent('1');
+      expect(screen.getByRole('button', { name: /notify shelter/i })).toHaveAttribute('aria-pressed', 'false');
     });
 
     fireEvent.click(screen.getByRole('button', { name: /like post/i }));
     await waitFor(() => {
       expect(toggleLikeInAnimalFeed).toHaveBeenCalledWith('a1', 'viewer-1', false);
     });
+
+    fireEvent.click(screen.getByRole('button', { name: /notify shelter/i }));
+    expect(screen.getByRole('button', { name: /notify shelter/i })).toHaveAttribute('aria-pressed', 'true');
 
     expect(screen.queryByText(/please rescue soon/i)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /toggle comments/i }));

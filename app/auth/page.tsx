@@ -117,7 +117,7 @@ export default function AuthPage() {
 
             <form className="mt-5 space-y-3" onSubmit={onSubmit}>
               <div className="space-y-1">
-                <label htmlFor="email" className="label text-white">Email</label>
+                <label htmlFor="email" className="mb-2 block text-base font-semibold tracking-wide text-white">Email</label>
                 <input
                   id="email"
                   type="email"
@@ -128,7 +128,7 @@ export default function AuthPage() {
                 />
               </div>
               <div className="space-y-1">
-                <label htmlFor="password" className="label text-white">Password</label>
+                <label htmlFor="password" className="mb-2 block text-base font-semibold tracking-wide text-white">Password</label>
                 <input
                   id="password"
                   type="password"
