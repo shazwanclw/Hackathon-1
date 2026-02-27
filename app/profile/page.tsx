@@ -19,6 +19,7 @@ function ProfilePageContent() {
   const search = useSearchParams();
   const queryUid = useMemo(() => (search.get('uid') || '').trim(), [search]);
   const [authUid, setAuthUid] = useState('');
+  const [authEmail, setAuthEmail] = useState('');
   const [authLoading, setAuthLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfileSummary | null>(null);
   const [reports, setReports] = useState<FeedSighting[]>([]);
@@ -35,6 +36,7 @@ function ProfilePageContent() {
   useEffect(() => {
     const unsub = observeAuth((user) => {
       setAuthUid(user?.uid ?? '');
+      setAuthEmail(user?.email ?? '');
       setAuthLoading(false);
     });
     return () => unsub();
@@ -56,9 +58,13 @@ function ProfilePageContent() {
       setError('');
       try {
         if (authUid) {
-          await upsertUserProfile(authUid, '');
+          await upsertUserProfile(authUid, authEmail);
         }
-        const [summary, rows] = await Promise.all([getUserProfileSummary(uid), listUserFeedSightings(uid)]);
+        const summaryFallbackEmail = authUid === uid ? authEmail : '';
+        const [summary, rows] = await Promise.all([
+          getUserProfileSummary(uid, summaryFallbackEmail),
+          listUserFeedSightings(uid),
+        ]);
         const following = authUid && authUid !== uid ? await isFollowingUser(authUid, uid) : false;
         if (!cancelled) {
           setProfile(summary);
@@ -77,7 +83,7 @@ function ProfilePageContent() {
     return () => {
       cancelled = true;
     };
-  }, [authLoading, authUid, queryUid]);
+  }, [authEmail, authLoading, authUid, queryUid]);
 
   const viewedUid = queryUid || authUid;
   const isOwnProfile = !!authUid && authUid === viewedUid;

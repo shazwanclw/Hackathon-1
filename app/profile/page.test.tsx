@@ -94,7 +94,7 @@ describe('Profile page', () => {
   it('shows a small delete icon for own posts and deletes on click', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     vi.mocked(observeAuth).mockImplementation(((cb: (user: unknown) => void) => {
-      cb({ uid: 'user-1' });
+      cb({ uid: 'user-1', email: 'user-1@gmail.com' });
       return () => {};
     }) as never);
 
@@ -131,7 +131,8 @@ describe('Profile page', () => {
 
     await waitFor(() => {
       expect(deleteAnimalPost).toHaveBeenCalledWith('animal-1');
-      expect(upsertUserProfile).toHaveBeenCalledWith('user-1', '');
+      expect(upsertUserProfile).toHaveBeenCalledWith('user-1', 'user-1@gmail.com');
+      expect(getUserProfileSummary).toHaveBeenCalledWith('user-1', 'user-1@gmail.com');
     });
   });
 });

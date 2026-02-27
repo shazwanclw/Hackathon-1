@@ -736,18 +736,20 @@ export async function deleteAnimalPost(animalId: string) {
   await deleteDoc(doc(db, 'animals', animalId));
 }
 
-export async function getUserProfileSummary(uid: string): Promise<UserProfileSummary> {
+export async function getUserProfileSummary(uid: string, fallbackEmail = ''): Promise<UserProfileSummary> {
   const snaps = await getDocs(query(collection(db, 'animals'), where('createdBy', '==', uid), limit(200)));
   const docs = snaps.docs.map((snap) => snap.data() as Record<string, unknown>);
   const firstWithEmail = docs.find((item) => typeof item.createdByEmail === 'string' && item.createdByEmail);
-  const fallbackEmail = firstWithEmail ? String(firstWithEmail.createdByEmail) : 'Unknown reporter';
-  const profile = await getUserProfile(uid, fallbackEmail);
+  const derivedFallbackEmail = firstWithEmail
+    ? String(firstWithEmail.createdByEmail)
+    : fallbackEmail || 'Unknown reporter';
+  const profile = await getUserProfile(uid, derivedFallbackEmail);
   const [followersCount, followingCount] = await Promise.all([getFollowerCount(uid), getFollowingCount(uid)]);
 
   return {
     uid,
-    email: profile.email || fallbackEmail,
-    username: profile.username || deriveUsername(profile.email || fallbackEmail),
+    email: profile.email || derivedFallbackEmail,
+    username: profile.username || deriveUsername(profile.email || derivedFallbackEmail),
     photoURL: profile.photoURL || '',
     followersCount,
     followingCount,
@@ -876,8 +878,10 @@ export async function getUserProfile(uid: string, fallbackEmail = ''): Promise<U
   }
 
   const data = snap.data() as Record<string, unknown>;
+  const rawEmail = String(data.email ?? '');
+  const safeEmail = isReporterEmailPlaceholder(rawEmail) ? String(fallbackEmail ?? '') : rawEmail;
   return {
-    email: String(data.email ?? fallbackEmail ?? ''),
+    email: safeEmail,
     username: String(data.username ?? fallbackUsername),
     photoURL: String(data.photoURL ?? ''),
     createdAt: data.createdAt,
@@ -1063,6 +1067,11 @@ function deriveUsername(emailOrId: string): string {
   if (!value) return 'straylink-user';
   if (value.includes('@')) return value.split('@')[0] || 'straylink-user';
   return value;
+}
+
+function isReporterEmailPlaceholder(value: string): boolean {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized === 'unknown reporter' || normalized === 'unknown';
 }
 
 function extractCreatedAt(data: Record<string, unknown>): Date | null {

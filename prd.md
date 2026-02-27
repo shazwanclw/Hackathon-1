@@ -1,7 +1,7 @@
 ﻿# StrayLink PRD (MVP)
 
 ## 1) Product Overview
-StrayLink is a web platform for reporting stray animals and urban wildlife, then routing those reports to NGOs or municipal teams for action. The MVP is built with Next.js, Firebase, Gemini-powered server-side AI, and Leaflet/OpenStreetMap, with no paid APIs and no Google Cloud billing requirements.
+StrayLink is a web platform for reporting stray animals and urban wildlife, then routing those reports to NGOs or municipal teams for action. The MVP is built with Next.js, Firebase, Gemini-powered server-side AI, and Leaflet/OpenStreetMap, without paid map APIs, and was developed during a 3-month Firebase trial window.
 
 Implementation status update (February 20, 2026): Firebase Storage is now provisioned on project `kita-hack-hackathon`, and `storage.rules` has been successfully deployed.
 
@@ -64,7 +64,9 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - Public auth page `/auth` provides login, register, and guest-entry actions.
 - Report page `/report` supports photo upload, auto location (default) or manual map pin, and note.
 - Manual map marker uses explicit Leaflet icon URLs to avoid broken default marker assets in Next.js.
-- Public map page `/map` shows all submitted case markers using limited public snapshot fields.
+- Public map page `/map` supports:
+  - normal marker mode from public `animals` sightings
+  - hotspot mode from `public_map_cases` snapshots
 - Feed page `/feed` shows all reports (not user-scoped), including reporter identity + profile link.
 - Profile page `/profile` shows user identity and user-scoped report history.
 - Lost & Found posts page `/lost-found` lists owner posts and includes AI match trigger.
@@ -79,6 +81,7 @@ StrayLink contributes to safer, healthier neighborhoods by:
   2. Generate `caseId`.
   3. Upload image to Storage.
   4. Write `cases/{caseId}` with pending AI placeholders.
+  5. Upsert `animals/{animalId}` and first `sightings/{sightingId}` entry.
   6. Write `public_tracks/{caseId_token}` limited tracking snapshot.
   7. Write `case_events` (`submitted`).
   8. Return case ID + token immediately.
@@ -88,7 +91,7 @@ StrayLink contributes to safer, healthier neighborhoods by:
 ### Admin
 - Unified login page `/auth` handles admin and public sign-in.
 - Dashboard `/admin/dashboard` lists/filter cases.
-- Case detail `/admin/case/[caseId]` supports verify/assign/resolve/reject with event log.
+- Case detail `/admin/case?caseId=<caseId>` supports verify/assign/resolve/reject with event log.
 - Admin actions also sync `public_tracks` status snapshot.
 - Map page `/admin/map` shows exact markers and filters.
 - Shelter management page `/admin/shelters` allows admins to grant/revoke shelter role access by UID.
@@ -192,7 +195,7 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - **Chosen approach: Option A-equivalent tokenized tracking snapshot.**
 - Public cannot read/list `cases`.
 - Public tracking reads are limited to `public_tracks/{caseId_token}` by possession of the secret tokenized document ID.
-- Public map reads are served from `public_map_cases` limited snapshots (no direct public `cases` reads).
+- Public map reads use public `animals` sightings for normal markers and `public_map_cases` for hotspot density (no public `cases` reads).
 - Public can create `cases`, `public_tracks`, and `case_events` with restricted shape checks.
 - Admin access requires `/admins/{uid}.enabled == true`.
 - Shelter posting access requires `/shelters/{uid}.enabled == true`.
@@ -207,10 +210,10 @@ StrayLink contributes to safer, healthier neighborhoods by:
 - Data/Auth/Storage: Firebase Web SDK v9 modular.
 - AI: Gemini via Firebase Cloud Functions for classification, non-diagnostic welfare risk screening, and Lost & Found Phase 1 visual match ranking.
 - Maps: Leaflet + OpenStreetMap tiles.
-- Deployment: Local development works with Next.js dev server. Public tracking uses a query route (`/track?caseId=...&t=...`) while admin case detail uses dynamic route segments (`/admin/case/[caseId]`).
+- Deployment: Local development works with Next.js dev server. Public tracking uses a query route (`/track?caseId=...&t=...`) and admin case detail uses query params (`/admin/case?caseId=...`).
 
 ## 10) Tech Constraints
-- Node 18+
+- Node 20.x (required for Firebase Functions runtime; local web app development is compatible with Node 18+)
 - No Cloud Run, no paid APIs, no Google Maps Platform.
 - Use `NEXT_PUBLIC_*` env vars for Firebase client config.
 
@@ -254,7 +257,7 @@ StrayLink contributes to safer, healthier neighborhoods by:
 4. Gemini updates animal type + welfare risk + triage.
 5. Admin verifies, assigns, resolves.
 6. Public tracking link shows status progression from `public_tracks`.
-6. Admin map visualizes marker hotspots.
+7. Admin map visualizes marker hotspots.
 
 ## 14) Risks and Mitigations
 - Model variance -> expose confidence and require human verification.
