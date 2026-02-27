@@ -3,6 +3,7 @@
 import React from 'react';
 import { Suspense } from 'react';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import PublicAccessGuard from '@/components/PublicAccessGuard';
 import { EmptyState, ErrorState, LoadingState } from '@/components/States';
@@ -31,6 +32,7 @@ function parseLatLng(label: string): { lat: number; lng: number } | null {
 function AnimalProfilePageContent() {
   const search = useSearchParams();
   const animalId = search.get('id') || '';
+  const focusedSightingId = search.get('sightingId') || '';
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -38,6 +40,11 @@ function AnimalProfilePageContent() {
   const [sightings, setSightings] = useState<AnimalSightingItem[]>([]);
   const [latestLocationText, setLatestLocationText] = useState('Location unavailable');
   const [sightingLocationText, setSightingLocationText] = useState<Record<string, string>>({});
+  const focusedSighting = sightings.find((item) => item.id === focusedSightingId) || null;
+  const activeSighting = focusedSighting || sightings[0] || null;
+  const activeLocationText = activeSighting
+    ? sightingLocationText[activeSighting.id] || activeSighting.locationLabel
+    : latestLocationText;
 
   useEffect(() => {
     let cancelled = false;
@@ -157,16 +164,23 @@ function AnimalProfilePageContent() {
           <h1 className="page-title">Animal Profile</h1>
 
           <article className="card overflow-hidden">
-            {animal.coverPhotoUrl ? (
+            {activeSighting?.photoUrl || animal.coverPhotoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={animal.coverPhotoUrl} alt={`${animal.type} cover`} className="h-72 w-full object-cover" />
+              <img src={activeSighting?.photoUrl || animal.coverPhotoUrl} alt={`${animal.type} cover`} className="h-72 w-full object-cover" />
             ) : null}
             <div className="space-y-4 p-5 text-sm">
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="rounded-2xl border border-brand-500/40 bg-[linear-gradient(145deg,rgba(106,73,37,0.86),rgba(139,96,50,0.84))] p-4 text-honey-50 shadow-[0_12px_28px_rgba(56,36,17,0.25)]">
                   <p className="text-xs font-semibold uppercase tracking-wide text-honey-100/95">Location Information</p>
-                  <p className="mt-1 text-sm font-semibold text-honey-50">Latest Location</p>
-                  <p className="text-sm leading-relaxed text-honey-50">{latestLocationText}</p>
+                  <p className="mt-1 text-sm font-semibold text-honey-50">
+                    {focusedSighting ? 'Viewing Sighting Location' : 'Latest Location'}
+                  </p>
+                  <p className="text-sm leading-relaxed text-honey-50">{activeLocationText}</p>
+                  {focusedSighting ? (
+                    <p className="mt-1 text-xs text-honey-100/95">Current: Previous sighting</p>
+                  ) : (
+                    <p className="mt-1 text-xs text-honey-100/95">Current: Latest location</p>
+                  )}
                 </div>
                 <div className="rounded-2xl border border-brand-500/40 bg-[linear-gradient(145deg,rgba(106,73,37,0.86),rgba(139,96,50,0.84))] p-4 text-honey-50 shadow-[0_12px_28px_rgba(56,36,17,0.25)]">
                   <p className="text-xs font-semibold uppercase tracking-wide text-honey-100/95">Info</p>
@@ -213,26 +227,49 @@ function AnimalProfilePageContent() {
           </article>
 
           <section className="space-y-3">
-            <h2 className="font-[var(--font-display)] text-2xl font-semibold text-brand-900">Sightings Timeline</h2>
+            <h2 className="font-[var(--font-display)] text-2xl font-semibold text-brand-900">All Sightings</h2>
             {sightings.length === 0 ? <EmptyState text="No sightings found for this animal." /> : null}
             <div className="grid gap-3">
-              {sightings.map((item) => (
-                <article key={item.id} className="card border border-brand-300/70 p-3">
-                  <div className="grid gap-3 sm:grid-cols-[7rem_minmax(0,1fr)] sm:items-start">
-                    {item.photoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={item.photoUrl} alt="Sighting" className="h-28 w-full rounded-xl object-cover sm:w-28" />
-                    ) : null}
-                    <div className="space-y-2 text-sm">
-                      <p className="text-brand-900">{item.caption || 'No caption provided.'}</p>
-                      <div className="rounded-lg border border-brand-200/80 bg-white/70 p-2">
-                        <p className="text-xs text-brand-800/70">{item.createdAtLabel}</p>
-                        <p className="text-xs text-muted">Location: {sightingLocationText[item.id] || item.locationLabel}</p>
+              {sightings.map((item, index) => {
+                const isLatest = index === 0;
+                const isFocused = focusedSightingId === item.id;
+                return (
+                  <article
+                    key={item.id}
+                    className={`card border p-3 ${isFocused ? 'border-brand-600 shadow-[0_0_0_2px_rgba(90,58,30,0.2)]' : 'border-brand-300/70'}`}
+                  >
+                    <Link
+                      href={`/animal?id=${encodeURIComponent(animalId)}&sightingId=${encodeURIComponent(item.id)}`}
+                      aria-label={`Open sighting ${item.id}`}
+                      className="block"
+                    >
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${isLatest ? 'bg-brand-700 text-honey-50' : 'bg-brand-100 text-brand-800'}`}>
+                          {isLatest ? 'Latest Sighting' : 'Previous sighting'}
+                        </span>
+                        {isFocused ? (
+                          <span className="rounded-full border border-brand-300 bg-white/80 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-brand-800">
+                            Current
+                          </span>
+                        ) : null}
                       </div>
-                    </div>
-                  </div>
-                </article>
-              ))}
+                      <div className="grid gap-3 sm:grid-cols-[7rem_minmax(0,1fr)] sm:items-start">
+                        {item.photoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={item.photoUrl} alt="Sighting" className="h-28 w-full rounded-xl object-cover sm:w-28" />
+                        ) : null}
+                        <div className="space-y-2 text-sm">
+                          <p className="text-brand-900">{item.caption || 'No caption provided.'}</p>
+                          <div className="rounded-lg border border-brand-200/80 bg-white/70 p-2">
+                            <p className="text-xs text-brand-800/70">{item.createdAtLabel}</p>
+                            <p className="text-xs text-muted">Location: {sightingLocationText[item.id] || item.locationLabel}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  </article>
+                );
+              })}
             </div>
           </section>
         </section>

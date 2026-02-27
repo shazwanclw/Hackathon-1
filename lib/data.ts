@@ -6,9 +6,11 @@ import {
   GeoPoint,
   getDoc,
   getDocs,
+  increment,
   limit,
   orderBy,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -544,6 +546,43 @@ export async function createAnimalWithFirstSighting(input: NewSightingPayloadInp
   return { animalId: animalRef.id, sightingId: sightingRef.id };
 }
 
+export async function addSightingToAnimal(input: NewSightingPayloadInput) {
+  const animalRef = doc(db, 'animals', input.animalId);
+  const sightingRef = doc(collection(db, 'animals', input.animalId, 'sightings'));
+  const sightingPayload = buildNewSightingPayload(input);
+  const nextPhotoUrls =
+    input.photoUrls && input.photoUrls.length > 0 ? input.photoUrls.slice(0, 3) : [input.photoUrl];
+
+  await runTransaction(db, async (tx) => {
+    const animalSnap = await tx.get(animalRef);
+    if (!animalSnap.exists()) {
+      throw new Error(`Animal ${input.animalId} not found.`);
+    }
+
+    tx.set(sightingRef, {
+      ...(sightingPayload as Omit<AnimalSightingDoc, 'createdAt' | 'location'>),
+      createdAt: serverTimestamp(),
+      location: new GeoPoint(input.location.lat, input.location.lng),
+    });
+
+    tx.set(
+      animalRef,
+      {
+        coverPhotoUrl: input.photoUrl,
+        lastSeenAt: serverTimestamp(),
+        lastSeenLocation: new GeoPoint(input.location.lat, input.location.lng),
+        latestSightingCaption: input.caption,
+        latestSightingPhotoPath: input.photoPath,
+        latestSightingPhotoUrls: nextPhotoUrls,
+        sightingCount: increment(1),
+      },
+      { merge: true }
+    );
+  });
+
+  return { animalId: input.animalId, sightingId: sightingRef.id };
+}
+
 export async function setCase(caseId: string, payload: CaseDoc) {
   await setDoc(doc(db, 'cases', caseId), {
     ...payload,
@@ -690,6 +729,11 @@ export async function addCommentToAnimalFeed(animalId: string, authorUid: string
     content: content.trim(),
     createdAt: serverTimestamp(),
   });
+}
+
+export async function deleteAnimalPost(animalId: string) {
+  if (!animalId) return;
+  await deleteDoc(doc(db, 'animals', animalId));
 }
 
 export async function getUserProfileSummary(uid: string): Promise<UserProfileSummary> {

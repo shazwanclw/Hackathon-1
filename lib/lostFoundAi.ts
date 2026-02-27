@@ -11,6 +11,16 @@ export type LostPetMatchResult = {
   reporterEmail: string;
 };
 
+export function pickAutoSightingAnimalId(
+  matches: LostPetMatchResult[],
+  minScore: number
+): string | null {
+  if (!Array.isArray(matches) || matches.length === 0) return null;
+  const [top] = matches;
+  if (!top?.animalId) return null;
+  return top.score >= minScore ? top.animalId : null;
+}
+
 async function fileToBase64(file: File) {
   const buffer = await file.arrayBuffer();
   let binary = '';

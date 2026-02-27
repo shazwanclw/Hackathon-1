@@ -1,8 +1,8 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ProfilePage from './page';
-import { getUserProfileSummary, isFollowingUser, listUserFeedSightings } from '@/lib/data';
+import { deleteAnimalPost, getUserProfileSummary, isFollowingUser, listUserFeedSightings, upsertUserProfile } from '@/lib/data';
 import { observeAuth } from '@/lib/auth';
 
 vi.mock('next/navigation', () => ({
@@ -23,9 +23,11 @@ vi.mock('@/lib/data', () => ({
   getUserProfileSummary: vi.fn(),
   listUserFeedSightings: vi.fn(),
   isFollowingUser: vi.fn(),
+  deleteAnimalPost: vi.fn(),
   followUser: vi.fn(),
   unfollowUser: vi.fn(),
   saveUserProfile: vi.fn(),
+  upsertUserProfile: vi.fn(),
   uploadUserProfilePhoto: vi.fn(),
 }));
 
@@ -86,6 +88,50 @@ describe('Profile page', () => {
       expect(screen.getByText(/sleeping near bus stop/i)).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /open animal profile/i })).toHaveAttribute('href', '/animal?id=animal-1');
       expect(screen.getByRole('button', { name: /follow/i })).toBeInTheDocument();
+    });
+  });
+
+  it('shows a small delete icon for own posts and deletes on click', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    vi.mocked(observeAuth).mockImplementation(((cb: (user: unknown) => void) => {
+      cb({ uid: 'user-1' });
+      return () => {};
+    }) as never);
+
+    vi.mocked(getUserProfileSummary).mockResolvedValue({
+      uid: 'user-1',
+      email: 'user-1@gmail.com',
+      reportCount: 1,
+      username: 'zaidi',
+      photoURL: 'https://example.com/avatar.jpg',
+      followersCount: 9,
+      followingCount: 2,
+    } as never);
+    vi.mocked(listUserFeedSightings).mockResolvedValue([
+      {
+        id: 'animal-1',
+        animalId: 'animal-1',
+        reporterUid: 'user-1',
+        reporterEmail: 'user-1@gmail.com',
+        reporterUsername: 'zaidi',
+        reporterPhotoURL: 'https://example.com/avatar.jpg',
+        type: 'dog',
+        caption: 'Sleeping near bus stop',
+        photoUrl: 'https://example.com/dog.jpg',
+        photoUrls: ['https://example.com/dog.jpg'],
+        createdAtLabel: 'just now',
+      },
+    ] as never);
+    vi.mocked(isFollowingUser).mockResolvedValue(false);
+
+    render(<ProfilePage />);
+
+    const deleteButton = await screen.findByRole('button', { name: /delete post/i });
+    fireEvent.click(deleteButton);
+
+    await waitFor(() => {
+      expect(deleteAnimalPost).toHaveBeenCalledWith('animal-1');
+      expect(upsertUserProfile).toHaveBeenCalledWith('user-1', '');
     });
   });
 });

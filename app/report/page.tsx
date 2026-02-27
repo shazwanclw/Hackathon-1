@@ -10,7 +10,9 @@ import UploadDropzone from '@/components/UploadDropzone';
 import { generateCaptionDraftFromImage } from '@/lib/aiCaption';
 import { observeAuth } from '@/lib/auth';
 import { reverseGeocode } from '@/lib/geocoding';
+import { findLostPetMatches, pickAutoSightingAnimalId } from '@/lib/lostFoundAi';
 import {
+  addSightingToAnimal,
   buildNewCasePayload,
   buildTrackId,
   createAnimalId,
@@ -34,6 +36,8 @@ type SubmitState = {
 } | null;
 
 type LocationMode = 'auto' | 'manual';
+const AUTO_SIGHTING_MATCH_MIN_SCORE = 0.88;
+const MATCH_TIMEOUT_MS = 2500;
 
 function getSubmitErrorMessage(error: unknown) {
   const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : '';
@@ -182,10 +186,30 @@ export default function ReportPage() {
     setLoading(true);
     setSubmitState(null);
 
+    const submittingToastId = toast.loading('Submitting post...');
     try {
-      const animalId = await createAnimalId();
+      toast.loading('Checking similar sightings...', { id: submittingToastId });
+      let aiMatchedAnimalId: string | null = null;
+      if (files[0]) {
+        try {
+          const matches = await Promise.race([
+            findLostPetMatches({ file: files[0], animalType: 'any' }),
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error('match_timeout')), MATCH_TIMEOUT_MS)
+            ),
+          ]);
+          const scopedMatches =
+            user.email && user.email.trim()
+              ? matches.filter((item) => String(item.reporterEmail || '').toLowerCase() === user.email!.toLowerCase())
+              : matches;
+          aiMatchedAnimalId = pickAutoSightingAnimalId(scopedMatches, AUTO_SIGHTING_MATCH_MIN_SCORE);
+        } catch (error) {
+          console.warn('Auto-sighting matching failed; falling back to new animal thread.', error);
+        }
+      }
       const caseId = await createCaseId();
       const trackingToken = createTrackingToken();
+      toast.loading('Uploading photos...', { id: submittingToastId });
       const uploadedPhotos = await Promise.all(files.map((file) => uploadCaseImage(caseId, file)));
       const photo = uploadedPhotos[0];
       if (!photo) {
@@ -197,6 +221,59 @@ export default function ReportPage() {
         confidence: 0,
         rawTopLabel: 'pending_gemini_classification',
       };
+
+      let created: { animalId: string; sightingId: string };
+      let linkedToExisting = false;
+      let animalId: string;
+      if (aiMatchedAnimalId) {
+        try {
+          toast.loading('Linking to existing sightings...', { id: submittingToastId });
+          created = await addSightingToAnimal({
+            animalId: aiMatchedAnimalId,
+            authorUid: user.uid,
+            authorEmail: user.email ?? '',
+            type: 'other',
+            caption,
+            photoUrl: photo.downloadUrl,
+            photoPath: photo.storagePath,
+            photoUrls: uploadedPhotos.map((item) => item.downloadUrl),
+            photoPaths: uploadedPhotos.map((item) => item.storagePath),
+            location,
+          });
+          linkedToExisting = true;
+          animalId = created.animalId;
+        } catch (error) {
+          console.warn('Auto-linking to existing animal failed; creating a new animal thread instead.', error);
+          animalId = await createAnimalId();
+          created = await createAnimalWithFirstSighting({
+            animalId,
+            authorUid: user.uid,
+            authorEmail: user.email ?? '',
+            type: 'other',
+            caption,
+            photoUrl: photo.downloadUrl,
+            photoPath: photo.storagePath,
+            photoUrls: uploadedPhotos.map((item) => item.downloadUrl),
+            photoPaths: uploadedPhotos.map((item) => item.storagePath),
+            location,
+          });
+        }
+      } else {
+        toast.loading('Creating new sighting thread...', { id: submittingToastId });
+        animalId = await createAnimalId();
+        created = await createAnimalWithFirstSighting({
+          animalId,
+          authorUid: user.uid,
+          authorEmail: user.email ?? '',
+          type: 'other',
+          caption,
+          photoUrl: photo.downloadUrl,
+          photoPath: photo.storagePath,
+          photoUrls: uploadedPhotos.map((item) => item.downloadUrl),
+          photoPaths: uploadedPhotos.map((item) => item.storagePath),
+          location,
+        });
+      }
 
       await setCase(
         caseId,
@@ -212,6 +289,7 @@ export default function ReportPage() {
       );
 
       const trackId = buildTrackId(caseId, trackingToken);
+      toast.loading('Finalizing submission...', { id: submittingToastId });
       await setPublicTrackSnapshot(trackId, {
         caseId,
         status: 'new',
@@ -243,20 +321,12 @@ export default function ReportPage() {
         changes: { animalType: 'other', confidence: 0 },
       });
 
-      const created = await createAnimalWithFirstSighting({
-        animalId,
-        authorUid: user.uid,
-        authorEmail: user.email ?? '',
-        type: 'other',
-        caption,
-        photoUrl: photo.downloadUrl,
-        photoPath: photo.storagePath,
-        photoUrls: uploadedPhotos.map((item) => item.downloadUrl),
-        photoPaths: uploadedPhotos.map((item) => item.storagePath),
-        location,
-      });
-
-      toast.success('Post submitted. AI screening will continue in background.');
+      toast.success(
+        linkedToExisting
+          ? 'Post submitted and linked to an existing sightings timeline. AI screening continues in background.'
+          : 'Post submitted. AI screening will continue in background.',
+        { id: submittingToastId }
+      );
       setSubmitState({ ...created, caseId, trackingToken });
       setShowSuccessModal(true);
       setFiles([]);
@@ -268,7 +338,7 @@ export default function ReportPage() {
       }
     } catch (err) {
       console.error(err);
-      toast.error(getSubmitErrorMessage(err));
+      toast.error(getSubmitErrorMessage(err), { id: submittingToastId });
     } finally {
       setLoading(false);
     }

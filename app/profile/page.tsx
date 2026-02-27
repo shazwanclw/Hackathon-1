@@ -5,10 +5,12 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { Trash2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import PublicAccessGuard from '@/components/PublicAccessGuard';
 import { EmptyState, ErrorState, LoadingState } from '@/components/States';
 import { observeAuth } from '@/lib/auth';
-import { followUser, getUserProfileSummary, isFollowingUser, listUserFeedSightings, saveUserProfile, unfollowUser, uploadUserProfilePhoto, upsertUserProfile } from '@/lib/data';
+import { deleteAnimalPost, followUser, getUserProfileSummary, isFollowingUser, listUserFeedSightings, saveUserProfile, unfollowUser, uploadUserProfilePhoto, upsertUserProfile } from '@/lib/data';
 import { FeedSighting, UserProfileSummary } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -27,6 +29,7 @@ function ProfilePageContent() {
   const [usernameDraft, setUsernameDraft] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
   const [editingUsername, setEditingUsername] = useState(false);
+  const [deletingAnimalId, setDeletingAnimalId] = useState('');
   const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -129,6 +132,30 @@ function ProfilePageContent() {
       setIsFollowing((prev) => !prev);
     } finally {
       setFollowLoading(false);
+    }
+  }
+
+  async function onDeletePost(animalId: string) {
+    if (!isOwnProfile || !animalId) return;
+    if (!window.confirm('Delete this post?')) return;
+
+    setDeletingAnimalId(animalId);
+    try {
+      await deleteAnimalPost(animalId);
+      setReports((current) => current.filter((item) => item.animalId !== animalId));
+      setProfile((current) => {
+        if (!current) return current;
+        return {
+          ...current,
+          reportCount: Math.max(0, current.reportCount - 1),
+        };
+      });
+      toast.success('Post deleted.');
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to delete post. Please refresh and try again.');
+    } finally {
+      setDeletingAnimalId('');
     }
   }
 
@@ -267,7 +294,20 @@ function ProfilePageContent() {
                       <p className="rounded-full border border-brand-300/70 bg-brand-100/70 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-800">
                         {item.type}
                       </p>
-                      <p className="text-xs text-brand-800/70">{item.createdAtLabel}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs text-brand-800/70">{item.createdAtLabel}</p>
+                        {isOwnProfile ? (
+                          <button
+                            type="button"
+                            aria-label="Delete post"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-brand-300/80 bg-white/80 text-brand-800 transition hover:bg-rose-50 hover:text-rose-700 disabled:opacity-50"
+                            onClick={() => onDeletePost(item.animalId)}
+                            disabled={deletingAnimalId === item.animalId}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        ) : null}
+                      </div>
                     </div>
                     <p className="min-h-16 text-sm leading-relaxed text-brand-900">{item.caption || 'No caption provided.'}</p>
                     <div className="flex flex-wrap gap-2">

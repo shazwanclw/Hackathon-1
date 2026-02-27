@@ -82,7 +82,8 @@ service cloud.firestore {
         && request.resource.data.type is string
         && request.resource.data.coverPhotoUrl is string
         && request.resource.data.sightingCount is int;
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin() || (isAuthed() && resource.data.createdBy == request.auth.uid);
+      allow delete: if isAdmin() || (isAuthed() && resource.data.createdBy == request.auth.uid);
 
       match /sightings/{sightingId} {
         allow get, list: if true;
