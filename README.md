@@ -322,7 +322,7 @@ This section is intentionally separated for judge-friendly review.
 
 ### Category A: Impact (60%)
 **Problem Statement & SDG Alignment**
-- Current answer: The project targets fragmented stray-animal reporting and delayed response workflows, aligned to SDG 11 (Sustainable Cities and Communities).
+- Current answer: The project targets fragmented stray-animal reporting and delayed response workflows, aligned to SDG 11 (Sustainable Cities and Communities) and SDG 15 (Life on Land).
 - Why this is justified: Safer public spaces, faster incident response, and clearer coordination between residents, NGOs, and municipal responders.
 - Technology contribution: Gemini-based triage support, structured tracking snapshots, and map workflows are used to improve response speed and consistency.
 
